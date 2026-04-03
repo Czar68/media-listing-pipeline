@@ -1,9 +1,9 @@
 # PROJECT STATE
 
-Status: PHASE_2_COMPLETE
+Status: PHASE_3_COMPLETE
 
 Current Phase:
-PHASE_02_CORE_IDENTITY_FOUNDATION
+PHASE_03_SCAN_INGESTION
 
 Approved Next Phase:
 TBD (not yet selected in this repo)
@@ -51,3 +51,28 @@ All legacy repos are archived and read-only
 **Proof completed:** Oracle suite in `packages/core-identity/tests/oracle/oracle.test.ts` (10 scenarios) — all passing via `npm test` at repo root.
 
 **Deferred:** Adapters, UI, publish, AI, pricing, eBay integration (out of scope for Phase 2).
+
+---
+
+## Phase 3 — SCAN_INGESTION (2026-04-03)
+
+- Phase 3 complete
+- `packages/scan-ingestion` added
+- Disc-only logic absorbed into the ingestion layer (rebuilt; legacy code not copied)
+- Deterministic candidate generation established
+- No-inference rule enforced at ingestion (observations stay null unless present on the scan)
+
+**Phase 3 complete.** `packages/scan-ingestion` added.
+
+**Packages:** `packages/core-domain`, `packages/core-identity`, `packages/scan-ingestion` (imports `core-domain` + `core-identity` only; no `core-condition`).
+
+**Ingestion rules established:**
+- Raw `ScanRecord` → `NormalizedScan` (trimmed strings, digit-only UPC with length check, no invented observations).
+- `generateCandidatesFromScan` → `CandidateGenerationResult` union (`SUCCESS` | `PARTIAL` | `FAILURE`) producing `IdentityCandidateSet` from `core-identity` only — no identity resolution, no condition, no I/O, no eBay fields, no AI.
+- Deterministic candidate generation order: UPC (`HIGH`) → CATALOG title (`MEDIUM`, exact `||` structured split) → MANUAL (`LOW` when `scanSource === MANUAL`).
+- Invalid UPC format yields warnings and does not block title-based candidates; missing title and UPC yields `FAILURE`.
+- Disc-only and related legacy behavior is absorbed as structured scan input and deterministic candidate emission only — legacy code not copied.
+
+**Proof completed:** Oracle suite in `packages/scan-ingestion/tests/oracle/oracle.test.ts` (10 scenarios) — all passing via `npm test` at repo root.
+
+**Deferred:** Identity resolution, condition, pricing, marketplace adapters (out of scope for Phase 3).
