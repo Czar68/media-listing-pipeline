@@ -2,5 +2,12 @@
   "name": "media-listing-pipeline",
   "private": true,
   "version": "0.0.0",
-  "packageManager": "pnpm@8.0.0"
+  "packageManager": "pnpm@8.0.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @media-listing/core-domain && npm run build -w @media-listing/core-condition",
+    "test": "npm run test -w @media-listing/core-condition"
+  }
 }
