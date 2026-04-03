@@ -1,9 +1,9 @@
 # PROJECT STATE
 
-Status: PHASE_3_COMPLETE
+Status: PHASE_4_COMPLETE
 
 Current Phase:
-PHASE_03_SCAN_INGESTION
+PHASE_04_IDENTITY_APPLICATION
 
 Approved Next Phase:
 TBD (not yet selected in this repo)
@@ -76,3 +76,25 @@ All legacy repos are archived and read-only
 **Proof completed:** Oracle suite in `packages/scan-ingestion/tests/oracle/oracle.test.ts` (10 scenarios) — all passing via `npm test` at repo root.
 
 **Deferred:** Identity resolution, condition, pricing, marketplace adapters (out of scope for Phase 3).
+
+---
+
+## Phase 4 — IDENTITY_APPLICATION (2026-04-03)
+
+- Phase 4 complete
+- `packages/identity-application` added
+- Operator identity resolution boundary established
+- Audit record model added (`ResolutionAuditRecord`)
+- No auto-selection rule preserved at the application boundary
+
+**Packages:** `packages/identity-application` imports only `@media-listing/core-domain` and `@media-listing/core-identity` (no `core-condition`, no scan-ingestion internals).
+
+**Application rules established:**
+- `IdentityResolutionRequest` carries explicit `selectedCandidateId | null`, `rationale | null`, and `alignmentProbe | null` — mapped into `resolveIdentity` without substituting selection or fabricating alignment when null (`alignment` omitted; core yields `INSUFFICIENT_DATA` / `ALIGNMENT_REQUIRED` when a selection exists but no probe).
+- `IdentityResolutionApplicationResult` mirrors core outcomes (`RESOLVED` | `CONFLICT` | `RESEARCH_REQUIRED`) with `resolvedIdentity` + `identitySnapshot` only on success; conflicts pass through unchanged; `RESEARCH_REQUIRED` carries the core payload.
+- `buildResolutionAuditRecord` produces data-only audit rows (no persistence).
+- Minimal `core-identity` extension: optional `alignment` on `ResolveIdentityInput` and `ALIGNMENT_REQUIRED` insufficient-data reason for explicit alignment gaps without dummy probes.
+
+**Proof completed:** Oracle suite in `packages/identity-application/tests/oracle/oracle.test.ts` (10 scenarios) — all passing via `npm test` at repo root.
+
+**Deferred:** Condition pipeline, adapters, UI, APIs (out of scope for Phase 4).

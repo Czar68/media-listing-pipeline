@@ -12,6 +12,7 @@ export const INSUFFICIENT_DATA_REASONS = [
   'SELECTION_REQUIRED',
   'UNKNOWN_SELECTED_ID',
   'INVALID_STRUCTURE',
+  'ALIGNMENT_REQUIRED',
 ] as const;
 export type InsufficientDataReason = (typeof INSUFFICIENT_DATA_REASONS)[number];
 

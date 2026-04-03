@@ -26,7 +26,8 @@ export interface ResolveIdentityInput {
   readonly operatorId: string;
   readonly rationale: string | undefined;
   readonly resolvedAt: string;
-  readonly alignment: IdentityAlignmentProbe;
+  /** When absent, resolution cannot complete for a valid selection (explicit probe required). */
+  readonly alignment?: IdentityAlignmentProbe;
 }
 
 function detectAlignmentConflictsForCandidate(
@@ -111,6 +112,13 @@ export function resolveIdentity(input: ResolveIdentityInput): IdentityResolution
     return {
       outcome: 'CONFLICT',
       conflicts: [{ kind: 'INSUFFICIENT_DATA', reason: 'UNKNOWN_SELECTED_ID' }],
+    };
+  }
+
+  if (input.alignment === undefined) {
+    return {
+      outcome: 'CONFLICT',
+      conflicts: [{ kind: 'INSUFFICIENT_DATA', reason: 'ALIGNMENT_REQUIRED' }],
     };
   }
 
