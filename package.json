@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w @media-listing/core-domain && npm run build -w @media-listing/core-condition",
-    "test": "npm run test -w @media-listing/core-condition"
+    "build": "npm run build -w @media-listing/core-domain && npm run build -w @media-listing/core-condition && npm run build -w @media-listing/core-identity",
+    "test": "npm run test -w @media-listing/core-condition && npm run test -w @media-listing/core-identity"
   }
 }
