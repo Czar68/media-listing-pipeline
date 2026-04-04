@@ -12,10 +12,8 @@
     "@media-listing/catalog-match-orchestrator": "*",
     "@media-listing/catalog-match-output": "*",
     "@media-listing/catalog-match-selection": "*",
-    "@media-listing/catalog-matcher": "*",
     "@media-listing/catalog-normalization": "*",
     "@media-listing/catalog-query-plan": "*",
-    "@media-listing/catalog-title-matcher": "*",
     "@media-listing/identity-application": "*"
   },
   "devDependencies": {
