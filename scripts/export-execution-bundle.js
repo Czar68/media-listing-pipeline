@@ -7,7 +7,7 @@ const path = require('path');
 const { buildMediaListingPipeline } = require('@media-listing/media-listing-pipeline');
 const { buildExecutionPlan } = require('@media-listing/media-listing-execution-planner');
 const { runExecutionPlan } = require('@media-listing/media-listing-execution-runner');
-const { buildExecutionReport } = require('@media-listing/media-listing-execution-report');
+const { buildExecutionBundle } = require('@media-listing/media-listing-execution-bundle');
 
 const FIXED_TS = '2026-04-03T12:00:00.000Z';
 const SCAN_ID = 'snap-1';
@@ -54,9 +54,7 @@ const input = {
 const pipelineResult = buildMediaListingPipeline(input);
 const executionPlan = buildExecutionPlan(pipelineResult);
 const executionRun = runExecutionPlan(executionPlan);
-const executionReport = buildExecutionReport({ executionPlan, executionRun });
-
-const bundle = { executionPlan, executionRun, executionReport };
+const bundle = buildExecutionBundle({ executionPlan, executionRun });
 
 const outDir = path.join('artifacts');
 const outFile = path.join(outDir, 'media-listing-execution-bundle.json');
