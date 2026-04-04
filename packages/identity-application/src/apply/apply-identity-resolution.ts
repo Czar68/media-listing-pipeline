@@ -7,23 +7,26 @@ import { validateIdentityResolutionRequest } from '../validators/validate-identi
 function mapCoreResult(
   core: IdentityResolutionResult,
 ): IdentityResolutionApplicationResult {
-  if (core.outcome === 'RESOLVED') {
-    return {
-      kind: 'RESOLVED',
-      resolvedIdentity: core.resolved,
-      identitySnapshot: core.snapshot,
-    };
+  switch (core.outcome) {
+    case 'RESOLVED':
+      return {
+        outcome: 'RESOLVED',
+        resolvedIdentity: core.resolved,
+        identitySnapshot: core.snapshot,
+      };
+    case 'CONFLICT':
+      return {
+        outcome: 'CONFLICT',
+        conflicts: core.conflicts,
+      };
+    case 'RESEARCH_REQUIRED': {
+      const { outcome: _coreOutcome, ...reason } = core;
+      return {
+        outcome: 'RESEARCH_REQUIRED',
+        reason,
+      };
+    }
   }
-  if (core.outcome === 'CONFLICT') {
-    return {
-      kind: 'CONFLICT',
-      conflicts: core.conflicts,
-    };
-  }
-  return {
-    kind: 'RESEARCH_REQUIRED',
-    researchRequiredPayload: core,
-  };
 }
 
 /**
@@ -32,22 +35,15 @@ function mapCoreResult(
 export function applyIdentityResolution(
   request: IdentityResolutionRequest,
 ): IdentityResolutionApplicationResult {
-  const validated = validateIdentityResolutionRequest(request);
-  if (!validated.ok) {
-    return {
-      kind: 'CONFLICT',
-      conflicts: [{ kind: 'INSUFFICIENT_DATA', reason: 'INVALID_STRUCTURE' }],
-    };
-  }
+  validateIdentityResolutionRequest(request);
 
-  const r = validated.value;
   const coreResult = resolveIdentity({
-    candidateSet: r.candidateSet,
-    selectedCandidateId: r.selectedCandidateId ?? undefined,
-    operatorId: r.operatorId,
-    rationale: r.rationale ?? undefined,
-    resolvedAt: r.requestedAt,
-    alignment: r.alignmentProbe ?? undefined,
+    candidateSet: request.candidateSet,
+    selectedCandidateId: request.selectedCandidateId ?? undefined,
+    operatorId: request.operatorId,
+    rationale: request.rationale ?? undefined,
+    resolvedAt: request.requestedAt,
+    alignment: request.alignmentProbe ?? undefined,
   });
 
   return mapCoreResult(coreResult);

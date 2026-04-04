@@ -42,7 +42,7 @@ function baseRequest(overrides: Partial<IdentityResolutionRequest> = {}): Identi
 describe('identity application oracle proofs', () => {
   it('1. explicit valid selectedCandidateId produces RESOLVED', () => {
     const result = applyIdentityResolution(baseRequest());
-    expect(result.kind).toBe('RESOLVED');
+    expect(result.outcome).toBe('RESOLVED');
   });
 
   it('2. null selectedCandidateId with single candidate does not auto-resolve', () => {
@@ -52,8 +52,8 @@ describe('identity application oracle proofs', () => {
         candidateSet: createIdentityCandidateSet([baseCandidate()]),
       }),
     );
-    expect(result.kind).toBe('CONFLICT');
-    if (result.kind === 'CONFLICT') {
+    expect(result.outcome).toBe('CONFLICT');
+    if (result.outcome === 'CONFLICT') {
       expect(result.conflicts.some((c) => c.kind === 'INSUFFICIENT_DATA' && c.reason === 'SELECTION_REQUIRED')).toBe(
         true,
       );
@@ -70,8 +70,8 @@ describe('identity application oracle proofs', () => {
         ]),
       }),
     );
-    expect(result.kind).toBe('CONFLICT');
-    if (result.kind === 'CONFLICT') {
+    expect(result.outcome).toBe('CONFLICT');
+    if (result.outcome === 'CONFLICT') {
       const m = result.conflicts.find((c) => c.kind === 'MULTI_MATCH_AMBIGUITY');
       expect(m?.kind).toBe('MULTI_MATCH_AMBIGUITY');
       if (m?.kind === 'MULTI_MATCH_AMBIGUITY') {
@@ -80,24 +80,20 @@ describe('identity application oracle proofs', () => {
     }
   });
 
-  it('4. unknown selectedCandidateId does not resolve', () => {
-    const result = applyIdentityResolution(
-      baseRequest({
-        selectedCandidateId: 'nope',
-      }),
-    );
-    expect(result.kind).toBe('CONFLICT');
-    if (result.kind === 'CONFLICT') {
-      expect(result.conflicts.some((c) => c.kind === 'INSUFFICIENT_DATA' && c.reason === 'UNKNOWN_SELECTED_ID')).toBe(
-        true,
-      );
-    }
+  it('4. invalid selectedCandidateId (not in candidateSet) does not resolve', () => {
+    expect(() =>
+      applyIdentityResolution(
+        baseRequest({
+          selectedCandidateId: 'nope',
+        }),
+      ),
+    ).toThrow(/selectedCandidateId must exist in candidateSet/);
   });
 
   it('5. RESOLVED result includes identitySnapshot', () => {
     const result = applyIdentityResolution(baseRequest());
-    expect(result.kind).toBe('RESOLVED');
-    if (result.kind === 'RESOLVED') {
+    expect(result.outcome).toBe('RESOLVED');
+    if (result.outcome === 'RESOLVED') {
       expect(result.identitySnapshot.snapshotId.length).toBeGreaterThan(0);
       expect(result.identitySnapshot.candidate.candidateId).toBe('cand-1');
     }
@@ -109,7 +105,7 @@ describe('identity application oracle proofs', () => {
         selectedCandidateId: null,
       }),
     );
-    expect(conflict.kind).toBe('CONFLICT');
+    expect(conflict.outcome).toBe('CONFLICT');
     expect('identitySnapshot' in conflict).toBe(false);
 
     const research = applyIdentityResolution(
@@ -119,7 +115,7 @@ describe('identity application oracle proofs', () => {
         alignmentProbe: null,
       }),
     );
-    expect(research.kind).toBe('RESEARCH_REQUIRED');
+    expect(research.outcome).toBe('RESEARCH_REQUIRED');
     expect('identitySnapshot' in research).toBe(false);
   });
 
@@ -129,8 +125,8 @@ describe('identity application oracle proofs', () => {
         candidateSet: createIdentityCandidateSet([baseCandidate({ region: 'PAL_UK' })]),
       }),
     );
-    expect(result.kind).toBe('CONFLICT');
-    if (result.kind === 'CONFLICT') {
+    expect(result.outcome).toBe('CONFLICT');
+    if (result.outcome === 'CONFLICT') {
       const r = result.conflicts.find((c) => c.kind === 'REGION_CONFLICT');
       expect(r?.kind).toBe('REGION_CONFLICT');
       if (r?.kind === 'REGION_CONFLICT') {
@@ -150,10 +146,10 @@ describe('identity application oracle proofs', () => {
   it('9. audit record is generated correctly for RESOLVED', () => {
     const req = baseRequest({ rationale: 'picked' });
     const result = applyIdentityResolution(req);
-    expect(result.kind).toBe('RESOLVED');
+    expect(result.outcome).toBe('RESOLVED');
     const audit = buildResolutionAuditRecord(req, result);
     expect(audit.outcomeType).toBe('RESOLVED');
-    expect(audit.snapshotId).toBe(result.kind === 'RESOLVED' ? result.identitySnapshot.snapshotId : null);
+    expect(audit.snapshotId).toBe(result.outcome === 'RESOLVED' ? result.identitySnapshot.snapshotId : null);
     expect(audit.requestId).toBe('req-1');
     expect(audit.operatorId).toBe('op-1');
     expect(audit.selectedCandidateId).toBe('cand-1');
@@ -164,7 +160,7 @@ describe('identity application oracle proofs', () => {
   it('10. audit record is generated correctly for CONFLICT / RESEARCH_REQUIRED', () => {
     const reqConflict = baseRequest({ selectedCandidateId: null });
     const conflict = applyIdentityResolution(reqConflict);
-    expect(conflict.kind).toBe('CONFLICT');
+    expect(conflict.outcome).toBe('CONFLICT');
     const auditC = buildResolutionAuditRecord(reqConflict, conflict);
     expect(auditC.outcomeType).toBe('CONFLICT');
     expect(auditC.snapshotId).toBeNull();
@@ -175,7 +171,7 @@ describe('identity application oracle proofs', () => {
       alignmentProbe: null,
     });
     const research = applyIdentityResolution(reqResearch);
-    expect(research.kind).toBe('RESEARCH_REQUIRED');
+    expect(research.outcome).toBe('RESEARCH_REQUIRED');
     const auditR = buildResolutionAuditRecord(reqResearch, research);
     expect(auditR.outcomeType).toBe('RESEARCH_REQUIRED');
     expect(auditR.snapshotId).toBeNull();

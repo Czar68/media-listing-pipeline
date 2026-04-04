@@ -9,7 +9,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@media-listing/core-domain": "*",
     "@media-listing/core-identity": "*"
   },
   "devDependencies": {

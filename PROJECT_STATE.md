@@ -98,3 +98,16 @@ All legacy repos are archived and read-only
 **Proof completed:** Oracle suite in `packages/identity-application/tests/oracle/oracle.test.ts` (10 scenarios) — all passing via `npm test` at repo root.
 
 **Deferred:** Condition pipeline, adapters, UI, APIs (out of scope for Phase 4).
+
+---
+
+PHASE_04 — identity-application
+
+* status: complete
+* package: packages/identity-application
+* summary:
+
+  * operator identity resolution boundary established
+  * deterministic bridge to core-identity
+  * audit record model added
+  * no auto-selection rule enforced

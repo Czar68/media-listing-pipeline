@@ -1,48 +1,45 @@
-import type { ValidationFailure, ValidationResult } from '@media-listing/core-domain';
-import { validationFail, validationOk } from '@media-listing/core-domain';
 import type { IdentityResolutionRequest } from '../model/identity-resolution-request';
 
-function isIso8601Like(s: string): boolean {
-  return !Number.isNaN(Date.parse(s));
+function assertRequestId(requestId: string): void {
+  if (typeof requestId !== 'string' || requestId.trim().length === 0) {
+    throw new Error('INVALID_IDENTITY_RESOLUTION_REQUEST: requestId must exist');
+  }
 }
 
-export function validateIdentityResolutionRequest(
-  request: IdentityResolutionRequest,
-): ValidationResult<IdentityResolutionRequest> {
-  const failures: ValidationFailure[] = [];
-
-  if (request.requestId.trim().length === 0) {
-    failures.push({
-      code: 'REQUEST_ID_BLANK',
-      message: 'requestId must be non-empty',
-      path: ['requestId'],
-    });
+function assertOperatorId(operatorId: string): void {
+  if (typeof operatorId !== 'string' || operatorId.trim().length === 0) {
+    throw new Error('INVALID_IDENTITY_RESOLUTION_REQUEST: operatorId must exist');
   }
+}
 
-  if (request.operatorId.trim().length === 0) {
-    failures.push({
-      code: 'OPERATOR_ID_BLANK',
-      message: 'operatorId must be non-empty',
-      path: ['operatorId'],
-    });
+function assertCandidateSet(
+  candidateSet: IdentityResolutionRequest['candidateSet'],
+): asserts candidateSet is IdentityResolutionRequest['candidateSet'] {
+  if (candidateSet === undefined || candidateSet === null) {
+    throw new Error('INVALID_IDENTITY_RESOLUTION_REQUEST: candidateSet must exist');
   }
+  if (typeof candidateSet !== 'object' || !Array.isArray(candidateSet.candidates)) {
+    throw new Error('INVALID_IDENTITY_RESOLUTION_REQUEST: candidateSet must exist');
+  }
+}
 
-  if (request.requestedAt.trim().length === 0) {
-    failures.push({
-      code: 'REQUESTED_AT_BLANK',
-      message: 'requestedAt must be non-empty',
-      path: ['requestedAt'],
-    });
-  } else if (!isIso8601Like(request.requestedAt)) {
-    failures.push({
-      code: 'REQUESTED_AT_UNPARSEABLE',
-      message: 'requestedAt must be a parseable ISO 8601 string',
-      path: ['requestedAt'],
-    });
+function assertSelectedCandidateMembership(request: IdentityResolutionRequest): void {
+  const { selectedCandidateId, candidateSet } = request;
+  if (selectedCandidateId === null) {
+    return;
   }
+  const ok = candidateSet.candidates.some((c) => c.candidateId === selectedCandidateId);
+  if (!ok) {
+    throw new Error('INVALID_IDENTITY_RESOLUTION_REQUEST: selectedCandidateId must exist in candidateSet');
+  }
+}
 
-  if (failures.length > 0) {
-    return validationFail(failures);
-  }
-  return validationOk(request);
+/**
+ * Validates operator input without mutating it. Throws on invalid input.
+ */
+export function validateIdentityResolutionRequest(request: IdentityResolutionRequest): void {
+  assertRequestId(request.requestId);
+  assertOperatorId(request.operatorId);
+  assertCandidateSet(request.candidateSet);
+  assertSelectedCandidateMembership(request);
 }

@@ -6,14 +6,14 @@ export function buildResolutionAuditRecord(
   request: IdentityResolutionRequest,
   result: IdentityResolutionApplicationResult,
 ): ResolutionAuditRecord {
-  const snapshotId = result.kind === 'RESOLVED' ? result.identitySnapshot.snapshotId : null;
+  const snapshotId = result.outcome === 'RESOLVED' ? result.identitySnapshot.snapshotId : null;
 
   return {
     requestId: request.requestId,
     operatorId: request.operatorId,
     selectedCandidateId: request.selectedCandidateId,
     requestedAt: request.requestedAt,
-    outcomeType: result.kind,
+    outcomeType: result.outcome,
     snapshotId,
     rationale: request.rationale,
   };
