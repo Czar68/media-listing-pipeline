@@ -8,6 +8,8 @@
   ],
   "scripts": {
     "build": "npm run build -w @media-listing/core-domain && npm run build -w @media-listing/core-condition && npm run build -w @media-listing/core-identity && npm run build -w @media-listing/scan-ingestion && npm run build -w @media-listing/identity-application",
-    "test": "npm run test -w @media-listing/core-condition && npm run test -w @media-listing/core-identity && npm run test -w @media-listing/scan-ingestion && npm run test -w @media-listing/identity-application"
+    "test": "npm run test -w @media-listing/core-condition && npm run test -w @media-listing/core-identity && npm run test -w @media-listing/scan-ingestion && npm run test -w @media-listing/identity-application",
+    "export:media-listing:pipeline": "node scripts/media-listing/export-pipeline-snapshot.js",
+    "verify:media-listing:execution-report": "npm run build -w @media-listing/media-listing-execution-planner && npm run build -w @media-listing/media-listing-execution-runner && npm run build -w @media-listing/media-listing-execution-report && node scripts/export-execution-report.js"
   }
 }
