@@ -13,6 +13,7 @@
     "verify:media-listing:execution-report": "npm run build -w @media-listing/media-listing-execution-planner && npm run build -w @media-listing/media-listing-execution-runner && npm run build -w @media-listing/media-listing-execution-report && node scripts/export-execution-report.js",
     "verify:media-listing:execution-plan": "npm run build -w @media-listing/media-listing-execution-planner && node scripts/export-execution-plan.js",
     "verify:media-listing:execution-run": "npm run build -w @media-listing/media-listing-execution-planner && npm run build -w @media-listing/media-listing-execution-runner && node scripts/export-execution-run.js",
-    "verify:media-listing:execution-bundle": "npm run build -w @media-listing/media-listing-execution-planner && npm run build -w @media-listing/media-listing-execution-runner && npm run build -w @media-listing/media-listing-execution-report && node scripts/export-execution-bundle.js"
+    "verify:media-listing:execution-bundle": "npm run build -w @media-listing/media-listing-execution-planner && npm run build -w @media-listing/media-listing-execution-runner && npm run build -w @media-listing/media-listing-execution-report && node scripts/export-execution-bundle.js",
+    "verify:media-listing:execution-bundle-package": "npm run build -w @media-listing/media-listing-execution-planner && npm run build -w @media-listing/media-listing-execution-runner && npm run build -w @media-listing/media-listing-execution-report && npm run build -w @media-listing/media-listing-execution-bundle"
   }
 }
