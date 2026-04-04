@@ -1,0 +1,37 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@media-listing/catalog-match-input": ["../catalog-match-input/dist/index.d.ts"],
+      "@media-listing/catalog-match-orchestrator": ["../catalog-match-orchestrator/dist/index.d.ts"],
+      "@media-listing/catalog-match-output": ["../catalog-match-output/dist/index.d.ts"],
+      "@media-listing/catalog-match-selection": ["../catalog-match-selection/dist/index.d.ts"],
+      "@media-listing/catalog-matcher": ["../catalog-matcher/dist/index.d.ts"],
+      "@media-listing/catalog-normalization": ["../catalog-normalization/dist/index.d.ts"],
+      "@media-listing/catalog-pipeline": ["../catalog-pipeline/dist/index.d.ts"],
+      "@media-listing/catalog-query-plan": ["../catalog-query-plan/dist/index.d.ts"],
+      "@media-listing/catalog-title-matcher": ["../catalog-title-matcher/dist/index.d.ts"],
+      "@media-listing/core-identity": ["../core-identity/dist/index.d.ts"],
+      "@media-listing/identity-application": ["../identity-application/dist/index.d.ts"],
+      "@media-listing/listing-assembly": ["../listing-assembly/dist/index.d.ts"],
+      "@media-listing/listing-input": ["../listing-input/dist/index.d.ts"],
+      "@media-listing/listing-output": ["../listing-output/dist/index.d.ts"],
+      "@media-listing/listing-preparation": ["../listing-preparation/dist/index.d.ts"],
+      "@media-listing/publication-adapter": ["../publication-adapter/dist/index.d.ts"],
+      "@media-listing/publication-batch": ["../publication-batch/dist/index.d.ts"],
+      "@media-listing/publication-execution-intent": ["../publication-execution-intent/dist/index.d.ts"],
+      "@media-listing/publication-execution-output": ["../publication-execution-output/dist/index.d.ts"],
+      "@media-listing/publication-execution-request": ["../publication-execution-request/dist/index.d.ts"],
+      "@media-listing/publication-input": ["../publication-input/dist/index.d.ts"],
+      "@media-listing/publication-request": ["../publication-request/dist/index.d.ts"],
+      "@media-listing/publication-run-envelope": ["../publication-run-envelope/dist/index.d.ts"],
+      "@media-listing/scan-ingestion": ["../scan-ingestion/dist/index.d.ts"]
+    },
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true,
+    "types": ["node"]
+  },
+  "include": ["src"]
+}

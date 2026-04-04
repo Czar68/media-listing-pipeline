@@ -1,0 +1,40 @@
+{
+  "name": "@media-listing/media-listing-pipeline",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@media-listing/catalog-match-input": "*",
+    "@media-listing/catalog-match-orchestrator": "*",
+    "@media-listing/catalog-match-output": "*",
+    "@media-listing/catalog-match-selection": "*",
+    "@media-listing/catalog-matcher": "*",
+    "@media-listing/catalog-normalization": "*",
+    "@media-listing/catalog-pipeline": "*",
+    "@media-listing/catalog-query-plan": "*",
+    "@media-listing/catalog-title-matcher": "*",
+    "@media-listing/core-identity": "*",
+    "@media-listing/identity-application": "*",
+    "@media-listing/listing-assembly": "*",
+    "@media-listing/listing-input": "*",
+    "@media-listing/listing-output": "*",
+    "@media-listing/listing-preparation": "*",
+    "@media-listing/publication-adapter": "*",
+    "@media-listing/publication-batch": "*",
+    "@media-listing/publication-execution-intent": "*",
+    "@media-listing/publication-execution-output": "*",
+    "@media-listing/publication-execution-request": "*",
+    "@media-listing/publication-input": "*",
+    "@media-listing/publication-request": "*",
+    "@media-listing/publication-run-envelope": "*",
+    "@media-listing/scan-ingestion": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.0",
+    "typescript": "^5.4.0"
+  }
+}
