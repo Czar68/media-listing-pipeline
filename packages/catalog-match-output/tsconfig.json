@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@media-listing/catalog-match-selection": ["../catalog-match-selection/dist/index.d.ts"]
+    },
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true,
+    "types": ["node"]
+  },
+  "include": ["src"]
+}
