@@ -133,6 +133,8 @@ PHASE_04 — identity-application
 | `verify:media-listing:execution-full-snapshot-loader` | Execution full snapshot loader (minimal top-level section check) |
 | `export:media-listing:execution-full-snapshot-contract` | Deterministic execution full snapshot contract JSON export |
 | `verify:media-listing:execution-full-snapshot-contract` | Contract verify for full snapshot (runs contract export first) |
+| `export:media-listing:execution-full-snapshot-package` | Package JSON bundling snapshot + contract artifacts |
+| `verify:media-listing:execution-full-snapshot-package` | Full snapshot package verify (regenerates snapshot, contract, package, then verifies) |
 
 **Typical build order (high level):** `media-listing-pipeline` → `media-listing-execution-fixture` (when a script uses the fixture) → `media-listing-execution-planner` → `media-listing-execution-runner` → `media-listing-execution-report` → `media-listing-execution-bundle` → then the `node scripts/...` step where applicable.
 
@@ -154,3 +156,9 @@ PHASE_04 — identity-application
 ## PHASE_53 — Deterministic execution full snapshot contract verification (2026-04-05)
 
 **Append-only note:** Checked-in `artifacts/media-listing-execution-full-snapshot-contract.json` describes the required top-level sections for `media-listing-execution-full-snapshot.json`. `export:media-listing:execution-full-snapshot-contract` writes that contract; `verify:media-listing:execution-full-snapshot-contract` re-exports the contract then runs `scripts/verify-execution-full-snapshot-contract.js`, which resolves both paths relative to the script and fails if the snapshot is missing any contract-required keys. Run after the full snapshot exists (for example via `verify:media-listing:execution-full-snapshot`).
+
+---
+
+## PHASE_54 — Deterministic execution full snapshot package verification (2026-04-05)
+
+**Append-only note:** `artifacts/media-listing-execution-full-snapshot-package.json` bundles parsed `snapshotArtifact` and `contractArtifact` from the standalone snapshot and contract files. `export:media-listing:execution-full-snapshot-package` reads those artifacts (paths relative to the script) and writes the package. `verify:media-listing:execution-full-snapshot-package` runs full snapshot verify, contract export, package export, then `scripts/verify-execution-full-snapshot-package.js`, which validates shape and that every `contractArtifact.requiredTopLevelSections` entry exists on `snapshotArtifact`.

@@ -1,0 +1,1145 @@
+{
+  "snapshotArtifact": {
+    "fixture": {
+      "scanRecord": {
+        "scanId": "snap-1",
+        "scanSource": "DISC",
+        "rawTitle": null,
+        "rawUPC": "5901234123457",
+        "observedDiscCount": null,
+        "observedRegion": null,
+        "timestamp": "2026-04-03T12:00:00.000Z"
+      },
+      "identityResolution": {
+        "requestId": "req-1",
+        "selectedCandidateId": "a8ed50f6247bdbc4d649538c04b09dbeb4f7a7517a5eb2d4182bfde08ff80cdb",
+        "operatorId": "op-1",
+        "rationale": null,
+        "requestedAt": "2026-04-03T12:00:00.000Z",
+        "alignmentProbe": {
+          "observedDiscSlotCount": 1,
+          "observedRegionCode": "OTHER"
+        }
+      },
+      "catalogRecords": [
+        {
+          "title": "Snapshot Catalog Row",
+          "productId": "upc:5901234123457",
+          "region": "OTHER",
+          "mediaFormat": "OTHER_PHYSICAL"
+        }
+      ]
+    },
+    "pipeline": {
+      "scanIngestion": {
+        "kind": "SUCCESS",
+        "candidateSet": {
+          "candidates": [
+            {
+              "candidateId": "a8ed50f6247bdbc4d649538c04b09dbeb4f7a7517a5eb2d4182bfde08ff80cdb",
+              "productId": "upc:5901234123457",
+              "source": "UPC",
+              "confidence": "HIGH",
+              "title": "UPC 5901234123457",
+              "mediaType": "OTHER_PHYSICAL",
+              "region": "OTHER",
+              "discCount": 1
+            }
+          ]
+        }
+      },
+      "coreIdentity": {
+        "resolveInput": {
+          "candidateSet": {
+            "candidates": [
+              {
+                "candidateId": "a8ed50f6247bdbc4d649538c04b09dbeb4f7a7517a5eb2d4182bfde08ff80cdb",
+                "productId": "upc:5901234123457",
+                "source": "UPC",
+                "confidence": "HIGH",
+                "title": "UPC 5901234123457",
+                "mediaType": "OTHER_PHYSICAL",
+                "region": "OTHER",
+                "discCount": 1
+              }
+            ]
+          },
+          "selectedCandidateId": "a8ed50f6247bdbc4d649538c04b09dbeb4f7a7517a5eb2d4182bfde08ff80cdb",
+          "operatorId": "op-1",
+          "resolvedAt": "2026-04-03T12:00:00.000Z",
+          "alignment": {
+            "observedDiscSlotCount": 1,
+            "observedRegionCode": "OTHER"
+          }
+        },
+        "resolution": {
+          "outcome": "RESOLVED",
+          "resolved": {
+            "selectedCandidateId": "a8ed50f6247bdbc4d649538c04b09dbeb4f7a7517a5eb2d4182bfde08ff80cdb",
+            "decisionSource": "MANUAL",
+            "timestamp": "2026-04-03T12:00:00.000Z",
+            "operatorId": "op-1"
+          },
+          "snapshot": {
+            "snapshotId": "1|upc:5901234123457|a8ed50f6247bdbc4d649538c04b09dbeb4f7a7517a5eb2d4182bfde08ff80cdb|2026-04-03T12:00:00.000Z|op-1",
+            "schemaVersion": "1",
+            "timestamp": "2026-04-03T12:00:00.000Z",
+            "candidate": {
+              "candidateId": "a8ed50f6247bdbc4d649538c04b09dbeb4f7a7517a5eb2d4182bfde08ff80cdb",
+              "productId": "upc:5901234123457",
+              "source": "UPC",
+              "confidence": "HIGH",
+              "title": "UPC 5901234123457",
+              "mediaType": "OTHER_PHYSICAL",
+              "region": "OTHER",
+              "discCount": 1
+            },
+            "resolution": {
+              "selectedCandidateId": "a8ed50f6247bdbc4d649538c04b09dbeb4f7a7517a5eb2d4182bfde08ff80cdb",
+              "decisionSource": "MANUAL",
+              "timestamp": "2026-04-03T12:00:00.000Z",
+              "operatorId": "op-1"
+            }
+          }
+        }
+      },
+      "identityApplication": {
+        "outcome": "RESOLVED",
+        "resolvedIdentity": {
+          "selectedCandidateId": "a8ed50f6247bdbc4d649538c04b09dbeb4f7a7517a5eb2d4182bfde08ff80cdb",
+          "decisionSource": "MANUAL",
+          "timestamp": "2026-04-03T12:00:00.000Z",
+          "operatorId": "op-1"
+        },
+        "identitySnapshot": {
+          "snapshotId": "1|upc:5901234123457|a8ed50f6247bdbc4d649538c04b09dbeb4f7a7517a5eb2d4182bfde08ff80cdb|2026-04-03T12:00:00.000Z|op-1",
+          "schemaVersion": "1",
+          "timestamp": "2026-04-03T12:00:00.000Z",
+          "candidate": {
+            "candidateId": "a8ed50f6247bdbc4d649538c04b09dbeb4f7a7517a5eb2d4182bfde08ff80cdb",
+            "productId": "upc:5901234123457",
+            "source": "UPC",
+            "confidence": "HIGH",
+            "title": "UPC 5901234123457",
+            "mediaType": "OTHER_PHYSICAL",
+            "region": "OTHER",
+            "discCount": 1
+          },
+          "resolution": {
+            "selectedCandidateId": "a8ed50f6247bdbc4d649538c04b09dbeb4f7a7517a5eb2d4182bfde08ff80cdb",
+            "decisionSource": "MANUAL",
+            "timestamp": "2026-04-03T12:00:00.000Z",
+            "operatorId": "op-1"
+          }
+        }
+      },
+      "catalogQueryPlan": {
+        "steps": [
+          {
+            "kind": "UPC",
+            "value": "upc:5901234123457"
+          }
+        ]
+      },
+      "catalogNormalization": [
+        {
+          "title": "Snapshot Catalog Row",
+          "productId": "upc:5901234123457",
+          "region": "OTHER",
+          "mediaFormat": "OTHER_PHYSICAL"
+        }
+      ],
+      "catalogMatchInput": {
+        "identity": {
+          "source": "UPC",
+          "title": "UPC 5901234123457",
+          "productId": "upc:5901234123457"
+        },
+        "querySteps": [
+          {
+            "kind": "UPC",
+            "value": "upc:5901234123457"
+          }
+        ],
+        "candidates": [
+          {
+            "title": "Snapshot Catalog Row",
+            "productId": "upc:5901234123457",
+            "region": "OTHER",
+            "mediaFormat": "OTHER_PHYSICAL"
+          }
+        ]
+      },
+      "catalogMatcher": {
+        "matchKind": "UPC_EXACT",
+        "matches": [
+          {
+            "title": "Snapshot Catalog Row",
+            "productId": "upc:5901234123457",
+            "region": "OTHER",
+            "mediaFormat": "OTHER_PHYSICAL"
+          }
+        ]
+      },
+      "catalogTitleMatcher": {
+        "matchKind": "NONE",
+        "matches": []
+      },
+      "catalogMatchOrchestrator": {
+        "matchKind": "UPC_EXACT",
+        "matches": [
+          {
+            "title": "Snapshot Catalog Row",
+            "productId": "upc:5901234123457",
+            "region": "OTHER",
+            "mediaFormat": "OTHER_PHYSICAL"
+          }
+        ]
+      },
+      "catalogMatchSelection": {
+        "matches": [
+          {
+            "title": "Snapshot Catalog Row",
+            "productId": "upc:5901234123457",
+            "region": "OTHER",
+            "mediaFormat": "OTHER_PHYSICAL"
+          }
+        ]
+      },
+      "catalogMatchOutput": {
+        "matches": [
+          {
+            "title": "Snapshot Catalog Row",
+            "productId": "upc:5901234123457",
+            "region": "OTHER",
+            "mediaFormat": "OTHER_PHYSICAL"
+          }
+        ]
+      },
+      "catalogPipeline": {
+        "input": {
+          "identity": {
+            "outcome": "RESOLVED",
+            "resolvedIdentity": {
+              "selectedCandidateId": "a8ed50f6247bdbc4d649538c04b09dbeb4f7a7517a5eb2d4182bfde08ff80cdb",
+              "decisionSource": "MANUAL",
+              "timestamp": "2026-04-03T12:00:00.000Z",
+              "operatorId": "op-1"
+            },
+            "identitySnapshot": {
+              "snapshotId": "1|upc:5901234123457|a8ed50f6247bdbc4d649538c04b09dbeb4f7a7517a5eb2d4182bfde08ff80cdb|2026-04-03T12:00:00.000Z|op-1",
+              "schemaVersion": "1",
+              "timestamp": "2026-04-03T12:00:00.000Z",
+              "candidate": {
+                "candidateId": "a8ed50f6247bdbc4d649538c04b09dbeb4f7a7517a5eb2d4182bfde08ff80cdb",
+                "productId": "upc:5901234123457",
+                "source": "UPC",
+                "confidence": "HIGH",
+                "title": "UPC 5901234123457",
+                "mediaType": "OTHER_PHYSICAL",
+                "region": "OTHER",
+                "discCount": 1
+              },
+              "resolution": {
+                "selectedCandidateId": "a8ed50f6247bdbc4d649538c04b09dbeb4f7a7517a5eb2d4182bfde08ff80cdb",
+                "decisionSource": "MANUAL",
+                "timestamp": "2026-04-03T12:00:00.000Z",
+                "operatorId": "op-1"
+              }
+            }
+          },
+          "catalogRecords": [
+            {
+              "title": "Snapshot Catalog Row",
+              "productId": "upc:5901234123457",
+              "region": "OTHER",
+              "mediaFormat": "OTHER_PHYSICAL"
+            }
+          ]
+        },
+        "output": {
+          "matches": [
+            {
+              "title": "Snapshot Catalog Row",
+              "productId": "upc:5901234123457",
+              "region": "OTHER",
+              "mediaFormat": "OTHER_PHYSICAL"
+            }
+          ]
+        }
+      },
+      "listingInput": {
+        "matches": [
+          {
+            "title": "Snapshot Catalog Row",
+            "productId": "upc:5901234123457",
+            "region": "OTHER",
+            "mediaFormat": "OTHER_PHYSICAL"
+          }
+        ]
+      },
+      "listingPreparation": {
+        "catalogMatches": [
+          {
+            "title": "Snapshot Catalog Row",
+            "productId": "upc:5901234123457",
+            "region": "OTHER",
+            "mediaFormat": "OTHER_PHYSICAL"
+          }
+        ],
+        "imageReferences": [],
+        "conditionSummary": null,
+        "pricing": null,
+        "shippingProfile": null,
+        "marketplaceChannel": null
+      },
+      "listingAssembly": {
+        "catalogMatches": [
+          {
+            "title": "Snapshot Catalog Row",
+            "productId": "upc:5901234123457",
+            "region": "OTHER",
+            "mediaFormat": "OTHER_PHYSICAL"
+          }
+        ],
+        "imageReferences": [],
+        "conditionSummary": null,
+        "pricing": null,
+        "shippingProfile": null,
+        "marketplaceChannel": null
+      },
+      "listingOutput": {
+        "publishableListing": {
+          "catalogMatches": [
+            {
+              "title": "Snapshot Catalog Row",
+              "productId": "upc:5901234123457",
+              "region": "OTHER",
+              "mediaFormat": "OTHER_PHYSICAL"
+            }
+          ],
+          "imageReferences": [],
+          "conditionSummary": null,
+          "pricing": null,
+          "shippingProfile": null,
+          "marketplaceChannel": null
+        },
+        "marketplaceAssignedIdentifiers": null,
+        "publicationDeliveryMetadata": null
+      },
+      "publicationInput": {
+        "listingOutputHandoff": {
+          "publishableListing": {
+            "catalogMatches": [
+              {
+                "title": "Snapshot Catalog Row",
+                "productId": "upc:5901234123457",
+                "region": "OTHER",
+                "mediaFormat": "OTHER_PHYSICAL"
+              }
+            ],
+            "imageReferences": [],
+            "conditionSummary": null,
+            "pricing": null,
+            "shippingProfile": null,
+            "marketplaceChannel": null
+          },
+          "marketplaceAssignedIdentifiers": null,
+          "publicationDeliveryMetadata": null
+        },
+        "adapterExecutionContext": null,
+        "publicationRequestCorrelation": null
+      },
+      "publicationRequest": {
+        "publicationInputContract": {
+          "listingOutputHandoff": {
+            "publishableListing": {
+              "catalogMatches": [
+                {
+                  "title": "Snapshot Catalog Row",
+                  "productId": "upc:5901234123457",
+                  "region": "OTHER",
+                  "mediaFormat": "OTHER_PHYSICAL"
+                }
+              ],
+              "imageReferences": [],
+              "conditionSummary": null,
+              "pricing": null,
+              "shippingProfile": null,
+              "marketplaceChannel": null
+            },
+            "marketplaceAssignedIdentifiers": null,
+            "publicationDeliveryMetadata": null
+          },
+          "adapterExecutionContext": null,
+          "publicationRequestCorrelation": null
+        },
+        "adapterExecutorBinding": null,
+        "publicationDispatchMetadata": null
+      },
+      "publicationAdapter": {
+        "publicationRequestContract": {
+          "publicationInputContract": {
+            "listingOutputHandoff": {
+              "publishableListing": {
+                "catalogMatches": [
+                  {
+                    "title": "Snapshot Catalog Row",
+                    "productId": "upc:5901234123457",
+                    "region": "OTHER",
+                    "mediaFormat": "OTHER_PHYSICAL"
+                  }
+                ],
+                "imageReferences": [],
+                "conditionSummary": null,
+                "pricing": null,
+                "shippingProfile": null,
+                "marketplaceChannel": null
+              },
+              "marketplaceAssignedIdentifiers": null,
+              "publicationDeliveryMetadata": null
+            },
+            "adapterExecutionContext": null,
+            "publicationRequestCorrelation": null
+          },
+          "adapterExecutorBinding": null,
+          "publicationDispatchMetadata": null
+        },
+        "adapterPayload": {
+          "publicationInputContract": {
+            "listingOutputHandoff": {
+              "publishableListing": {
+                "catalogMatches": [
+                  {
+                    "title": "Snapshot Catalog Row",
+                    "productId": "upc:5901234123457",
+                    "region": "OTHER",
+                    "mediaFormat": "OTHER_PHYSICAL"
+                  }
+                ],
+                "imageReferences": [],
+                "conditionSummary": null,
+                "pricing": null,
+                "shippingProfile": null,
+                "marketplaceChannel": null
+              },
+              "marketplaceAssignedIdentifiers": null,
+              "publicationDeliveryMetadata": null
+            },
+            "adapterExecutionContext": null,
+            "publicationRequestCorrelation": null
+          },
+          "adapterExecutionContext": {
+            "adapterName": null,
+            "adapterAccountRef": null,
+            "adapterEnvironment": null
+          },
+          "adapterSubmission": {
+            "submissionMode": null,
+            "idempotencyKey": null,
+            "externalListingRef": null
+          }
+        }
+      },
+      "publicationBatch": {
+        "adapterPayloads": [
+          {
+            "publicationRequestContract": {
+              "publicationInputContract": {
+                "listingOutputHandoff": {
+                  "publishableListing": {
+                    "catalogMatches": [
+                      {
+                        "title": "Snapshot Catalog Row",
+                        "productId": "upc:5901234123457",
+                        "region": "OTHER",
+                        "mediaFormat": "OTHER_PHYSICAL"
+                      }
+                    ],
+                    "imageReferences": [],
+                    "conditionSummary": null,
+                    "pricing": null,
+                    "shippingProfile": null,
+                    "marketplaceChannel": null
+                  },
+                  "marketplaceAssignedIdentifiers": null,
+                  "publicationDeliveryMetadata": null
+                },
+                "adapterExecutionContext": null,
+                "publicationRequestCorrelation": null
+              },
+              "adapterExecutorBinding": null,
+              "publicationDispatchMetadata": null
+            },
+            "adapterPayload": {
+              "publicationInputContract": {
+                "listingOutputHandoff": {
+                  "publishableListing": {
+                    "catalogMatches": [
+                      {
+                        "title": "Snapshot Catalog Row",
+                        "productId": "upc:5901234123457",
+                        "region": "OTHER",
+                        "mediaFormat": "OTHER_PHYSICAL"
+                      }
+                    ],
+                    "imageReferences": [],
+                    "conditionSummary": null,
+                    "pricing": null,
+                    "shippingProfile": null,
+                    "marketplaceChannel": null
+                  },
+                  "marketplaceAssignedIdentifiers": null,
+                  "publicationDeliveryMetadata": null
+                },
+                "adapterExecutionContext": null,
+                "publicationRequestCorrelation": null
+              },
+              "adapterExecutionContext": {
+                "adapterName": null,
+                "adapterAccountRef": null,
+                "adapterEnvironment": null
+              },
+              "adapterSubmission": {
+                "submissionMode": null,
+                "idempotencyKey": null,
+                "externalListingRef": null
+              }
+            }
+          }
+        ],
+        "batchContext": {
+          "batchId": null,
+          "submittedAt": null,
+          "publisherRunRef": null
+        },
+        "batchPolicy": {
+          "orderingStrategy": null,
+          "maxBatchSize": null,
+          "dryRun": null
+        }
+      },
+      "publicationRunManifest": {
+        "adapterPayloads": [
+          {
+            "publicationRequestContract": {
+              "publicationInputContract": {
+                "listingOutputHandoff": {
+                  "publishableListing": {
+                    "catalogMatches": [
+                      {
+                        "title": "Snapshot Catalog Row",
+                        "productId": "upc:5901234123457",
+                        "region": "OTHER",
+                        "mediaFormat": "OTHER_PHYSICAL"
+                      }
+                    ],
+                    "imageReferences": [],
+                    "conditionSummary": null,
+                    "pricing": null,
+                    "shippingProfile": null,
+                    "marketplaceChannel": null
+                  },
+                  "marketplaceAssignedIdentifiers": null,
+                  "publicationDeliveryMetadata": null
+                },
+                "adapterExecutionContext": null,
+                "publicationRequestCorrelation": null
+              },
+              "adapterExecutorBinding": null,
+              "publicationDispatchMetadata": null
+            },
+            "adapterPayload": {
+              "publicationInputContract": {
+                "listingOutputHandoff": {
+                  "publishableListing": {
+                    "catalogMatches": [
+                      {
+                        "title": "Snapshot Catalog Row",
+                        "productId": "upc:5901234123457",
+                        "region": "OTHER",
+                        "mediaFormat": "OTHER_PHYSICAL"
+                      }
+                    ],
+                    "imageReferences": [],
+                    "conditionSummary": null,
+                    "pricing": null,
+                    "shippingProfile": null,
+                    "marketplaceChannel": null
+                  },
+                  "marketplaceAssignedIdentifiers": null,
+                  "publicationDeliveryMetadata": null
+                },
+                "adapterExecutionContext": null,
+                "publicationRequestCorrelation": null
+              },
+              "adapterExecutionContext": {
+                "adapterName": null,
+                "adapterAccountRef": null,
+                "adapterEnvironment": null
+              },
+              "adapterSubmission": {
+                "submissionMode": null,
+                "idempotencyKey": null,
+                "externalListingRef": null
+              }
+            }
+          }
+        ],
+        "batchContext": {
+          "batchId": null,
+          "submittedAt": null,
+          "publisherRunRef": null
+        },
+        "batchPolicy": {
+          "orderingStrategy": null,
+          "maxBatchSize": null,
+          "dryRun": null
+        }
+      },
+      "publicationRunEnvelope": {
+        "manifest": {
+          "adapterPayloads": [
+            {
+              "publicationRequestContract": {
+                "publicationInputContract": {
+                  "listingOutputHandoff": {
+                    "publishableListing": {
+                      "catalogMatches": [
+                        {
+                          "title": "Snapshot Catalog Row",
+                          "productId": "upc:5901234123457",
+                          "region": "OTHER",
+                          "mediaFormat": "OTHER_PHYSICAL"
+                        }
+                      ],
+                      "imageReferences": [],
+                      "conditionSummary": null,
+                      "pricing": null,
+                      "shippingProfile": null,
+                      "marketplaceChannel": null
+                    },
+                    "marketplaceAssignedIdentifiers": null,
+                    "publicationDeliveryMetadata": null
+                  },
+                  "adapterExecutionContext": null,
+                  "publicationRequestCorrelation": null
+                },
+                "adapterExecutorBinding": null,
+                "publicationDispatchMetadata": null
+              },
+              "adapterPayload": {
+                "publicationInputContract": {
+                  "listingOutputHandoff": {
+                    "publishableListing": {
+                      "catalogMatches": [
+                        {
+                          "title": "Snapshot Catalog Row",
+                          "productId": "upc:5901234123457",
+                          "region": "OTHER",
+                          "mediaFormat": "OTHER_PHYSICAL"
+                        }
+                      ],
+                      "imageReferences": [],
+                      "conditionSummary": null,
+                      "pricing": null,
+                      "shippingProfile": null,
+                      "marketplaceChannel": null
+                    },
+                    "marketplaceAssignedIdentifiers": null,
+                    "publicationDeliveryMetadata": null
+                  },
+                  "adapterExecutionContext": null,
+                  "publicationRequestCorrelation": null
+                },
+                "adapterExecutionContext": {
+                  "adapterName": null,
+                  "adapterAccountRef": null,
+                  "adapterEnvironment": null
+                },
+                "adapterSubmission": {
+                  "submissionMode": null,
+                  "idempotencyKey": null,
+                  "externalListingRef": null
+                }
+              }
+            }
+          ],
+          "batchContext": {
+            "batchId": null,
+            "submittedAt": null,
+            "publisherRunRef": null
+          },
+          "batchPolicy": {
+            "orderingStrategy": null,
+            "maxBatchSize": null,
+            "dryRun": null
+          }
+        },
+        "envelopeMetadata": {
+          "envelopeId": null,
+          "createdAt": null,
+          "transportVersion": null
+        },
+        "deliveryContext": {
+          "targetSystem": null,
+          "priority": null
+        }
+      },
+      "publicationExecutionIntent": {
+        "envelope": {
+          "manifest": {
+            "adapterPayloads": [
+              {
+                "publicationRequestContract": {
+                  "publicationInputContract": {
+                    "listingOutputHandoff": {
+                      "publishableListing": {
+                        "catalogMatches": [
+                          {
+                            "title": "Snapshot Catalog Row",
+                            "productId": "upc:5901234123457",
+                            "region": "OTHER",
+                            "mediaFormat": "OTHER_PHYSICAL"
+                          }
+                        ],
+                        "imageReferences": [],
+                        "conditionSummary": null,
+                        "pricing": null,
+                        "shippingProfile": null,
+                        "marketplaceChannel": null
+                      },
+                      "marketplaceAssignedIdentifiers": null,
+                      "publicationDeliveryMetadata": null
+                    },
+                    "adapterExecutionContext": null,
+                    "publicationRequestCorrelation": null
+                  },
+                  "adapterExecutorBinding": null,
+                  "publicationDispatchMetadata": null
+                },
+                "adapterPayload": {
+                  "publicationInputContract": {
+                    "listingOutputHandoff": {
+                      "publishableListing": {
+                        "catalogMatches": [
+                          {
+                            "title": "Snapshot Catalog Row",
+                            "productId": "upc:5901234123457",
+                            "region": "OTHER",
+                            "mediaFormat": "OTHER_PHYSICAL"
+                          }
+                        ],
+                        "imageReferences": [],
+                        "conditionSummary": null,
+                        "pricing": null,
+                        "shippingProfile": null,
+                        "marketplaceChannel": null
+                      },
+                      "marketplaceAssignedIdentifiers": null,
+                      "publicationDeliveryMetadata": null
+                    },
+                    "adapterExecutionContext": null,
+                    "publicationRequestCorrelation": null
+                  },
+                  "adapterExecutionContext": {
+                    "adapterName": null,
+                    "adapterAccountRef": null,
+                    "adapterEnvironment": null
+                  },
+                  "adapterSubmission": {
+                    "submissionMode": null,
+                    "idempotencyKey": null,
+                    "externalListingRef": null
+                  }
+                }
+              }
+            ],
+            "batchContext": {
+              "batchId": null,
+              "submittedAt": null,
+              "publisherRunRef": null
+            },
+            "batchPolicy": {
+              "orderingStrategy": null,
+              "maxBatchSize": null,
+              "dryRun": null
+            }
+          },
+          "envelopeMetadata": {
+            "envelopeId": null,
+            "createdAt": null,
+            "transportVersion": null
+          },
+          "deliveryContext": {
+            "targetSystem": null,
+            "priority": null
+          }
+        },
+        "executionIntent": {
+          "mode": null,
+          "trigger": null,
+          "retryPolicy": null
+        }
+      },
+      "publicationExecutionRequest": {
+        "executionIntent": {
+          "envelope": {
+            "manifest": {
+              "adapterPayloads": [
+                {
+                  "publicationRequestContract": {
+                    "publicationInputContract": {
+                      "listingOutputHandoff": {
+                        "publishableListing": {
+                          "catalogMatches": [
+                            {
+                              "title": "Snapshot Catalog Row",
+                              "productId": "upc:5901234123457",
+                              "region": "OTHER",
+                              "mediaFormat": "OTHER_PHYSICAL"
+                            }
+                          ],
+                          "imageReferences": [],
+                          "conditionSummary": null,
+                          "pricing": null,
+                          "shippingProfile": null,
+                          "marketplaceChannel": null
+                        },
+                        "marketplaceAssignedIdentifiers": null,
+                        "publicationDeliveryMetadata": null
+                      },
+                      "adapterExecutionContext": null,
+                      "publicationRequestCorrelation": null
+                    },
+                    "adapterExecutorBinding": null,
+                    "publicationDispatchMetadata": null
+                  },
+                  "adapterPayload": {
+                    "publicationInputContract": {
+                      "listingOutputHandoff": {
+                        "publishableListing": {
+                          "catalogMatches": [
+                            {
+                              "title": "Snapshot Catalog Row",
+                              "productId": "upc:5901234123457",
+                              "region": "OTHER",
+                              "mediaFormat": "OTHER_PHYSICAL"
+                            }
+                          ],
+                          "imageReferences": [],
+                          "conditionSummary": null,
+                          "pricing": null,
+                          "shippingProfile": null,
+                          "marketplaceChannel": null
+                        },
+                        "marketplaceAssignedIdentifiers": null,
+                        "publicationDeliveryMetadata": null
+                      },
+                      "adapterExecutionContext": null,
+                      "publicationRequestCorrelation": null
+                    },
+                    "adapterExecutionContext": {
+                      "adapterName": null,
+                      "adapterAccountRef": null,
+                      "adapterEnvironment": null
+                    },
+                    "adapterSubmission": {
+                      "submissionMode": null,
+                      "idempotencyKey": null,
+                      "externalListingRef": null
+                    }
+                  }
+                }
+              ],
+              "batchContext": {
+                "batchId": null,
+                "submittedAt": null,
+                "publisherRunRef": null
+              },
+              "batchPolicy": {
+                "orderingStrategy": null,
+                "maxBatchSize": null,
+                "dryRun": null
+              }
+            },
+            "envelopeMetadata": {
+              "envelopeId": null,
+              "createdAt": null,
+              "transportVersion": null
+            },
+            "deliveryContext": {
+              "targetSystem": null,
+              "priority": null
+            }
+          },
+          "executionIntent": {
+            "mode": null,
+            "trigger": null,
+            "retryPolicy": null
+          }
+        },
+        "executionRequest": {
+          "executor": null,
+          "dispatchPolicy": null,
+          "executionContext": null
+        }
+      },
+      "publicationExecutionOutput": {
+        "executionRequest": {
+          "executionIntent": {
+            "envelope": {
+              "manifest": {
+                "adapterPayloads": [
+                  {
+                    "publicationRequestContract": {
+                      "publicationInputContract": {
+                        "listingOutputHandoff": {
+                          "publishableListing": {
+                            "catalogMatches": [
+                              {
+                                "title": "Snapshot Catalog Row",
+                                "productId": "upc:5901234123457",
+                                "region": "OTHER",
+                                "mediaFormat": "OTHER_PHYSICAL"
+                              }
+                            ],
+                            "imageReferences": [],
+                            "conditionSummary": null,
+                            "pricing": null,
+                            "shippingProfile": null,
+                            "marketplaceChannel": null
+                          },
+                          "marketplaceAssignedIdentifiers": null,
+                          "publicationDeliveryMetadata": null
+                        },
+                        "adapterExecutionContext": null,
+                        "publicationRequestCorrelation": null
+                      },
+                      "adapterExecutorBinding": null,
+                      "publicationDispatchMetadata": null
+                    },
+                    "adapterPayload": {
+                      "publicationInputContract": {
+                        "listingOutputHandoff": {
+                          "publishableListing": {
+                            "catalogMatches": [
+                              {
+                                "title": "Snapshot Catalog Row",
+                                "productId": "upc:5901234123457",
+                                "region": "OTHER",
+                                "mediaFormat": "OTHER_PHYSICAL"
+                              }
+                            ],
+                            "imageReferences": [],
+                            "conditionSummary": null,
+                            "pricing": null,
+                            "shippingProfile": null,
+                            "marketplaceChannel": null
+                          },
+                          "marketplaceAssignedIdentifiers": null,
+                          "publicationDeliveryMetadata": null
+                        },
+                        "adapterExecutionContext": null,
+                        "publicationRequestCorrelation": null
+                      },
+                      "adapterExecutionContext": {
+                        "adapterName": null,
+                        "adapterAccountRef": null,
+                        "adapterEnvironment": null
+                      },
+                      "adapterSubmission": {
+                        "submissionMode": null,
+                        "idempotencyKey": null,
+                        "externalListingRef": null
+                      }
+                    }
+                  }
+                ],
+                "batchContext": {
+                  "batchId": null,
+                  "submittedAt": null,
+                  "publisherRunRef": null
+                },
+                "batchPolicy": {
+                  "orderingStrategy": null,
+                  "maxBatchSize": null,
+                  "dryRun": null
+                }
+              },
+              "envelopeMetadata": {
+                "envelopeId": null,
+                "createdAt": null,
+                "transportVersion": null
+              },
+              "deliveryContext": {
+                "targetSystem": null,
+                "priority": null
+              }
+            },
+            "executionIntent": {
+              "mode": null,
+              "trigger": null,
+              "retryPolicy": null
+            }
+          },
+          "executionRequest": {
+            "executor": null,
+            "dispatchPolicy": null,
+            "executionContext": null
+          }
+        },
+        "executionOutput": {
+          "executorResult": null,
+          "dispatchResult": null,
+          "executionStatus": null
+        }
+      }
+    },
+    "plan": {
+      "planSummary": {
+        "totalListings": 1,
+        "publishableListings": 1,
+        "skippedListings": 0
+      },
+      "plannedActions": [
+        {
+          "type": "PUBLISH_LISTING",
+          "source": "publication-request",
+          "reference": 0
+        }
+      ],
+      "skippedActions": []
+    },
+    "run": {
+      "executionSummary": {
+        "totalActions": 1,
+        "simulatedSuccess": 1,
+        "skipped": 0
+      },
+      "executionResults": [
+        {
+          "type": "PUBLISH_LISTING",
+          "reference": 0,
+          "status": "SIMULATED_SUCCESS"
+        }
+      ]
+    },
+    "report": {
+      "executionPlan": {
+        "planSummary": {
+          "totalListings": 1,
+          "publishableListings": 1,
+          "skippedListings": 0
+        },
+        "plannedActions": [
+          {
+            "type": "PUBLISH_LISTING",
+            "source": "publication-request",
+            "reference": 0
+          }
+        ],
+        "skippedActions": []
+      },
+      "executionRun": {
+        "executionSummary": {
+          "totalActions": 1,
+          "simulatedSuccess": 1,
+          "skipped": 0
+        },
+        "executionResults": [
+          {
+            "type": "PUBLISH_LISTING",
+            "reference": 0,
+            "status": "SIMULATED_SUCCESS"
+          }
+        ]
+      },
+      "reportSummary": {
+        "totalActions": 1,
+        "plannedActions": 1,
+        "skippedActions": 0,
+        "simulatedSuccess": 1
+      }
+    },
+    "bundle": {
+      "executionPlan": {
+        "planSummary": {
+          "totalListings": 1,
+          "publishableListings": 1,
+          "skippedListings": 0
+        },
+        "plannedActions": [
+          {
+            "type": "PUBLISH_LISTING",
+            "source": "publication-request",
+            "reference": 0
+          }
+        ],
+        "skippedActions": []
+      },
+      "executionRun": {
+        "executionSummary": {
+          "totalActions": 1,
+          "simulatedSuccess": 1,
+          "skipped": 0
+        },
+        "executionResults": [
+          {
+            "type": "PUBLISH_LISTING",
+            "reference": 0,
+            "status": "SIMULATED_SUCCESS"
+          }
+        ]
+      },
+      "executionReport": {
+        "executionPlan": {
+          "planSummary": {
+            "totalListings": 1,
+            "publishableListings": 1,
+            "skippedListings": 0
+          },
+          "plannedActions": [
+            {
+              "type": "PUBLISH_LISTING",
+              "source": "publication-request",
+              "reference": 0
+            }
+          ],
+          "skippedActions": []
+        },
+        "executionRun": {
+          "executionSummary": {
+            "totalActions": 1,
+            "simulatedSuccess": 1,
+            "skipped": 0
+          },
+          "executionResults": [
+            {
+              "type": "PUBLISH_LISTING",
+              "reference": 0,
+              "status": "SIMULATED_SUCCESS"
+            }
+          ]
+        },
+        "reportSummary": {
+          "totalActions": 1,
+          "plannedActions": 1,
+          "skippedActions": 0,
+          "simulatedSuccess": 1
+        }
+      }
+    }
+  },
+  "contractArtifact": {
+    "artifact": "media-listing-execution-full-snapshot.json",
+    "requiredTopLevelSections": [
+      "fixture",
+      "pipeline",
+      "plan",
+      "run",
+      "report",
+      "bundle"
+    ]
+  }
+}
