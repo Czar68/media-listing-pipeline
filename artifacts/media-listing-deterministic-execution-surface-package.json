@@ -1,0 +1,14 @@
+{
+  "executionFullSnapshotContract": {
+    "relativePath": "artifacts/media-listing-execution-full-snapshot-contract.json"
+  },
+  "executionFullSnapshotPackage": {
+    "relativePath": "artifacts/media-listing-execution-full-snapshot-package.json"
+  },
+  "executionStackPackageContract": {
+    "relativePath": "artifacts/media-listing-deterministic-execution-stack-package-contract.json"
+  },
+  "executionStackPackagePackage": {
+    "relativePath": "artifacts/media-listing-deterministic-execution-stack-package-package.json"
+  }
+}

@@ -143,6 +143,7 @@ PHASE_04 — identity-application
 | `export:media-listing:deterministic-execution-stack-package-package` | Writes checked-in package JSON derived from the stack package contract artifact |
 | `verify:media-listing:deterministic-execution-stack-package-package` | Compares stack package contract to checked-in package artifact |
 | `verify:media-listing:deterministic-execution-surface` | Aggregate verifier: deterministic execution stack plus stack-package export/verify ladder |
+| `export:media-listing:deterministic-execution-surface-package` | Writes checked-in surface package JSON (paths to final verification artifacts) |
 
 **Typical build order (high level):** `media-listing-pipeline` → `media-listing-execution-fixture` (when a script uses the fixture) → `media-listing-execution-planner` → `media-listing-execution-runner` → `media-listing-execution-report` → `media-listing-execution-bundle` → then the `node scripts/...` step where applicable.
 
@@ -206,3 +207,9 @@ PHASE_04 — identity-application
 ## PHASE_60 — Full deterministic execution surface verifier (2026-04-05)
 
 **Append-only note:** Repo-root `verify:media-listing:deterministic-execution-surface` runs `verify:media-listing:deterministic-execution-stack` first, then the aggregate stack-package ladder in order: stack package export, stack package loader, stack package contract export, stack package contract verify, stack package package export, stack package package verify. It is the single gate for the deterministic execution surface composed of the stack verifier plus the stack-package verifier ladder.
+
+---
+
+## PHASE_61 — Deterministic execution surface package export (2026-04-05)
+
+**Append-only note:** `export:media-listing:deterministic-execution-surface-package` writes checked-in `artifacts/media-listing-deterministic-execution-surface-package.json`, a minimal map of `relativePath` entries to the four final verification artifacts (full snapshot contract/package, stack package contract/package). It reads each file only to require existence and valid JSON; the surface package stores paths only. Ensure those artifacts exist (for example via the surface verifier or prior exports) before exporting.

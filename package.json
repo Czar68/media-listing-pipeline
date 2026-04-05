@@ -29,6 +29,7 @@
     "verify:media-listing:deterministic-execution-stack-package-contract": "node scripts/verify-deterministic-execution-stack-package-contract.js",
     "export:media-listing:deterministic-execution-stack-package-package": "node scripts/export-deterministic-execution-stack-package-package.js",
     "verify:media-listing:deterministic-execution-stack-package-package": "node scripts/verify-deterministic-execution-stack-package-package.js",
-    "verify:media-listing:deterministic-execution-surface": "npm run verify:media-listing:deterministic-execution-stack && npm run export:media-listing:deterministic-execution-stack-package && npm run verify:media-listing:deterministic-execution-stack-package-loader && npm run export:media-listing:deterministic-execution-stack-package-contract && npm run verify:media-listing:deterministic-execution-stack-package-contract && npm run export:media-listing:deterministic-execution-stack-package-package && npm run verify:media-listing:deterministic-execution-stack-package-package"
+    "verify:media-listing:deterministic-execution-surface": "npm run verify:media-listing:deterministic-execution-stack && npm run export:media-listing:deterministic-execution-stack-package && npm run verify:media-listing:deterministic-execution-stack-package-loader && npm run export:media-listing:deterministic-execution-stack-package-contract && npm run verify:media-listing:deterministic-execution-stack-package-contract && npm run export:media-listing:deterministic-execution-stack-package-package && npm run verify:media-listing:deterministic-execution-stack-package-package",
+    "export:media-listing:deterministic-execution-surface-package": "node scripts/export-deterministic-execution-surface-package.js"
   }
 }
