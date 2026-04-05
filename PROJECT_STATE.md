@@ -135,6 +135,7 @@ PHASE_04 — identity-application
 | `verify:media-listing:execution-full-snapshot-contract` | Contract verify for full snapshot (runs contract export first) |
 | `export:media-listing:execution-full-snapshot-package` | Package JSON bundling snapshot + contract artifacts |
 | `verify:media-listing:execution-full-snapshot-package` | Full snapshot package verify (regenerates snapshot, contract, package, then verifies) |
+| `verify:media-listing:deterministic-execution-stack` | Aggregate verifier: runs the deterministic execution verification ladder in order, ending at full snapshot |
 
 **Typical build order (high level):** `media-listing-pipeline` → `media-listing-execution-fixture` (when a script uses the fixture) → `media-listing-execution-planner` → `media-listing-execution-runner` → `media-listing-execution-report` → `media-listing-execution-bundle` → then the `node scripts/...` step where applicable.
 
@@ -162,3 +163,9 @@ PHASE_04 — identity-application
 ## PHASE_54 — Deterministic execution full snapshot package verification (2026-04-05)
 
 **Append-only note:** `artifacts/media-listing-execution-full-snapshot-package.json` bundles parsed `snapshotArtifact` and `contractArtifact` from the standalone snapshot and contract files. `export:media-listing:execution-full-snapshot-package` reads those artifacts (paths relative to the script) and writes the package. `verify:media-listing:execution-full-snapshot-package` runs full snapshot verify, contract export, package export, then `scripts/verify-execution-full-snapshot-package.js`, which validates shape and that every `contractArtifact.requiredTopLevelSections` entry exists on `snapshotArtifact`.
+
+---
+
+## PHASE_55 — Aggregate deterministic execution stack verifier (2026-04-05)
+
+**Append-only note:** Repo-root `verify:media-listing:deterministic-execution-stack` composes the existing deterministic execution verification ladder in dependency order (fixture package → plan → run → report → bundle → bundle package → full snapshot) and fails on the first failing step. It does not add new coverage beyond chaining those commands.

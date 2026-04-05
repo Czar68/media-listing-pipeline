@@ -21,6 +21,7 @@
     "export:media-listing:execution-full-snapshot-contract": "node scripts/export-execution-full-snapshot-contract.js",
     "verify:media-listing:execution-full-snapshot-contract": "npm run export:media-listing:execution-full-snapshot-contract && node scripts/verify-execution-full-snapshot-contract.js",
     "export:media-listing:execution-full-snapshot-package": "node scripts/export-execution-full-snapshot-package.js",
-    "verify:media-listing:execution-full-snapshot-package": "npm run verify:media-listing:execution-full-snapshot && npm run export:media-listing:execution-full-snapshot-contract && npm run export:media-listing:execution-full-snapshot-package && node scripts/verify-execution-full-snapshot-package.js"
+    "verify:media-listing:execution-full-snapshot-package": "npm run verify:media-listing:execution-full-snapshot && npm run export:media-listing:execution-full-snapshot-contract && npm run export:media-listing:execution-full-snapshot-package && node scripts/verify-execution-full-snapshot-package.js",
+    "verify:media-listing:deterministic-execution-stack": "npm run verify:media-listing:execution-fixture-package && npm run verify:media-listing:execution-plan && npm run verify:media-listing:execution-run && npm run verify:media-listing:execution-report && npm run verify:media-listing:execution-bundle && npm run verify:media-listing:execution-bundle-package && npm run verify:media-listing:execution-full-snapshot"
   }
 }
