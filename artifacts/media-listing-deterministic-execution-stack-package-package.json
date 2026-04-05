@@ -1,0 +1,26 @@
+{
+  "executionFixturePackage": {
+    "relativePath": null
+  },
+  "executionPlan": {
+    "relativePath": "artifacts/media-listing-execution-plan.json"
+  },
+  "executionRun": {
+    "relativePath": "artifacts/media-listing-execution-run.json"
+  },
+  "executionReport": {
+    "relativePath": "artifacts/media-listing-execution-report.json"
+  },
+  "executionBundle": {
+    "relativePath": "artifacts/media-listing-execution-bundle.json"
+  },
+  "executionBundlePackage": {
+    "relativePath": null
+  },
+  "executionFullSnapshotContract": {
+    "relativePath": "artifacts/media-listing-execution-full-snapshot-contract.json"
+  },
+  "executionFullSnapshotPackage": {
+    "relativePath": "artifacts/media-listing-execution-full-snapshot-package.json"
+  }
+}

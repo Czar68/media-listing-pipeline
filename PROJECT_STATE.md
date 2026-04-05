@@ -140,6 +140,8 @@ PHASE_04 — identity-application
 | `verify:media-listing:deterministic-execution-stack-package-loader` | Deterministic execution stack package loader (shape of checked-in stack package artifact) |
 | `export:media-listing:deterministic-execution-stack-package-contract` | Writes checked-in contract JSON derived from the stack package artifact |
 | `verify:media-listing:deterministic-execution-stack-package-contract` | Compares stack package artifact to checked-in contract |
+| `export:media-listing:deterministic-execution-stack-package-package` | Writes checked-in package JSON derived from the stack package contract artifact |
+| `verify:media-listing:deterministic-execution-stack-package-package` | Compares stack package contract to checked-in package artifact |
 
 **Typical build order (high level):** `media-listing-pipeline` → `media-listing-execution-fixture` (when a script uses the fixture) → `media-listing-execution-planner` → `media-listing-execution-runner` → `media-listing-execution-report` → `media-listing-execution-bundle` → then the `node scripts/...` step where applicable.
 
@@ -191,3 +193,9 @@ PHASE_04 — identity-application
 ## PHASE_58 — Deterministic execution stack package contract verification (2026-04-05)
 
 **Append-only note:** Checked-in `artifacts/media-listing-deterministic-execution-stack-package-contract.json` records the expected stack package shape (same eight keys and `relativePath` values as the loader). `export:media-listing:deterministic-execution-stack-package-contract` derives it only from `artifacts/media-listing-deterministic-execution-stack-package.json`. `verify:media-listing:deterministic-execution-stack-package-contract` compares the package artifact to that contract. Run stack package export first, then contract export, then contract verify when updating either artifact.
+
+---
+
+## PHASE_59 — Deterministic execution stack package package verification (2026-04-05)
+
+**Append-only note:** Checked-in `artifacts/media-listing-deterministic-execution-stack-package-package.json` is the packaged verification surface for the stack contract: same eight keys and `relativePath` map as the contract. `export:media-listing:deterministic-execution-stack-package-package` reads only `artifacts/media-listing-deterministic-execution-stack-package-contract.json` and writes the package artifact. `verify:media-listing:deterministic-execution-stack-package-package` compares contract to package. This completes the loader → contract → package ladder for the aggregate stack package.
