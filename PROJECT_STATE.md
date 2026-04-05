@@ -232,3 +232,9 @@ PHASE_04 — identity-application
 ## PHASE_64 — Deterministic execution surface package package verification (2026-04-05)
 
 **Append-only note:** Checked-in `artifacts/media-listing-deterministic-execution-surface-package-package.json` is the packaged verification surface for the surface contract: same four keys and `relativePath` map as the contract. `export:media-listing:deterministic-execution-surface-package-package` reads only `artifacts/media-listing-deterministic-execution-surface-package-contract.json` and writes the package artifact. `verify:media-listing:deterministic-execution-surface-package-package` compares contract to package. This completes the loader → contract → package ladder for the deterministic execution surface package.
+
+---
+
+## PHASE_65 — Deterministic execution surface package aggregate verifier (2026-04-05)
+
+**Append-only note:** Repo-root `verify:media-listing:deterministic-execution-surface-package` runs the full deterministic execution surface package ladder in order: surface package export, surface package loader, surface package contract export, surface package contract verify, surface package package export, surface package package verify. It is the single gate for that ladder and fails on the first failing step.

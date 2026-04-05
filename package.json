@@ -35,6 +35,7 @@
     "verify:media-listing:deterministic-execution-surface-package-contract": "node scripts/verify-deterministic-execution-surface-package-contract.js",
     "export:media-listing:deterministic-execution-surface-package-package": "node scripts/export-deterministic-execution-surface-package-package.js",
     "verify:media-listing:deterministic-execution-surface-package-package": "node scripts/verify-deterministic-execution-surface-package-package.js",
-    "verify:media-listing:deterministic-execution-surface-package-loader": "node scripts/verify-deterministic-execution-surface-package-loader.js"
+    "verify:media-listing:deterministic-execution-surface-package-loader": "node scripts/verify-deterministic-execution-surface-package-loader.js",
+    "verify:media-listing:deterministic-execution-surface-package": "npm run export:media-listing:deterministic-execution-surface-package && npm run verify:media-listing:deterministic-execution-surface-package-loader && npm run export:media-listing:deterministic-execution-surface-package-contract && npm run verify:media-listing:deterministic-execution-surface-package-contract && npm run export:media-listing:deterministic-execution-surface-package-package && npm run verify:media-listing:deterministic-execution-surface-package-package"
   }
 }
