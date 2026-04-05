@@ -111,3 +111,31 @@ PHASE_04 — identity-application
   * deterministic bridge to core-identity
   * audit record model added
   * no auto-selection rule enforced
+
+---
+
+## Deterministic execution export / verify chain (maintenance map)
+
+**Fixture source:** `buildExecutionFixture()` from `@media-listing/media-listing-execution-fixture` is the only source of deterministic execution input for repo-root export scripts. Do not duplicate that shape inline.
+
+**Repo-root npm scripts (deterministic):**
+
+| Script | Role |
+|--------|------|
+| `export:media-listing:pipeline` | Pipeline JSON snapshot export |
+| `verify:media-listing:execution-fixture-package` | Build pipeline + fixture packages only |
+| `verify:media-listing:execution-plan` | Plan artifact verify |
+| `verify:media-listing:execution-run` | Run artifact verify |
+| `verify:media-listing:execution-report` | Report artifact verify |
+| `verify:media-listing:execution-bundle` | Bundle JSON export verify |
+| `verify:media-listing:execution-bundle-package` | Build planner → runner → report → bundle packages only (no fixture script) |
+| `verify:media-listing:full-execution-snapshot` | Full snapshot JSON verify |
+
+**Typical build order (high level):** `media-listing-pipeline` → `media-listing-execution-fixture` (when a script uses the fixture) → `media-listing-execution-planner` → `media-listing-execution-runner` → `media-listing-execution-report` → `media-listing-execution-bundle` → then the `node scripts/...` step where applicable.
+
+**Order gotchas:**
+
+- **Planner depends on pipeline** — always build `media-listing-pipeline` before planner (and thus before any chain that compiles or runs code that imports planner).
+- **Bundle depends on report** — `media-listing-execution-bundle` imports `media-listing-execution-report`; build report before bundle.
+
+**Do not rely on stale workspace `dist/` output** — npm script chains in `package.json` are the source of truth for which packages get built before each verify/export; a clean clone should succeed without depending on leftover builds.
