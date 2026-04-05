@@ -137,6 +137,7 @@ PHASE_04 — identity-application
 | `verify:media-listing:execution-full-snapshot-package` | Full snapshot package verify (regenerates snapshot, contract, package, then verifies) |
 | `verify:media-listing:deterministic-execution-stack` | Aggregate verifier: runs the deterministic execution verification ladder in order, ending at full snapshot |
 | `export:media-listing:deterministic-execution-stack-package` | Writes stack contract package JSON (stable artifact path references) |
+| `verify:media-listing:deterministic-execution-stack-package-loader` | Deterministic execution stack package loader (shape of checked-in stack package artifact) |
 
 **Typical build order (high level):** `media-listing-pipeline` → `media-listing-execution-fixture` (when a script uses the fixture) → `media-listing-execution-planner` → `media-listing-execution-runner` → `media-listing-execution-report` → `media-listing-execution-bundle` → then the `node scripts/...` step where applicable.
 
@@ -176,3 +177,9 @@ PHASE_04 — identity-application
 ## PHASE_56 — Deterministic execution stack contract package (2026-04-05)
 
 **Append-only note:** `export:media-listing:deterministic-execution-stack-package` writes checked-in `artifacts/media-listing-deterministic-execution-stack-package.json`, a minimal contract map of stable `artifacts/…` references for the aggregate stack (plan/run/report/bundle JSON outputs, full snapshot contract and package; build-only steps use `relativePath: null`). Run `verify:media-listing:deterministic-execution-stack` first (and contract/package exports as needed) so the referenced files exist.
+
+---
+
+## PHASE_57 — Deterministic execution stack package loader verification (2026-04-05)
+
+**Append-only note:** Repo-root `verify:media-listing:deterministic-execution-stack-package-loader` runs `scripts/verify-deterministic-execution-stack-package-loader.js`, which resolves `artifacts/media-listing-deterministic-execution-stack-package.json` relative to the script (not `process.cwd()`) and verifies the fixed top-level keys and `relativePath` entries for the stack package contract. Use after `export:media-listing:deterministic-execution-stack-package` (with prerequisites satisfied) so the artifact matches the exporter output.
