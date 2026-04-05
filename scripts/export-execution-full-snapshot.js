@@ -19,7 +19,7 @@ const executionBundle = buildExecutionBundle({ executionPlan, executionRun });
 const snapshot = { mediaListingPipeline, executionBundle };
 
 const outDir = path.join('artifacts');
-const outFile = path.join(outDir, 'media-listing-full-execution-snapshot.json');
+const outFile = path.join(outDir, 'media-listing-execution-full-snapshot.json');
 
 fs.mkdirSync(outDir, { recursive: true });
 fs.writeFileSync(outFile, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8');
