@@ -7,16 +7,18 @@ const { buildExecutionFixture } = require('@media-listing/media-listing-executio
 const { buildMediaListingPipeline } = require('@media-listing/media-listing-pipeline');
 const { buildExecutionPlan } = require('@media-listing/media-listing-execution-planner');
 const { runExecutionPlan } = require('@media-listing/media-listing-execution-runner');
+const { buildExecutionReport } = require('@media-listing/media-listing-execution-report');
 const { buildExecutionBundle } = require('@media-listing/media-listing-execution-bundle');
 
-const input = buildExecutionFixture();
+const fixture = buildExecutionFixture();
 
-const mediaListingPipeline = buildMediaListingPipeline(input);
-const executionPlan = buildExecutionPlan(mediaListingPipeline);
-const executionRun = runExecutionPlan(executionPlan);
-const executionBundle = buildExecutionBundle({ executionPlan, executionRun });
+const pipeline = buildMediaListingPipeline(fixture);
+const plan = buildExecutionPlan(pipeline);
+const run = runExecutionPlan(plan);
+const report = buildExecutionReport({ executionPlan: plan, executionRun: run });
+const bundle = buildExecutionBundle({ executionPlan: plan, executionRun: run });
 
-const snapshot = { mediaListingPipeline, executionBundle };
+const snapshot = { fixture, pipeline, plan, run, report, bundle };
 
 const outDir = path.join('artifacts');
 const outFile = path.join(outDir, 'media-listing-execution-full-snapshot.json');

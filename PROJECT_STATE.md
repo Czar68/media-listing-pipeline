@@ -130,6 +130,7 @@ PHASE_04 — identity-application
 | `verify:media-listing:execution-bundle` | Bundle JSON export verify |
 | `verify:media-listing:execution-bundle-package` | Build planner → runner → report → bundle packages only (no fixture script) |
 | `verify:media-listing:execution-full-snapshot` | Execution full snapshot JSON verify |
+| `verify:media-listing:execution-full-snapshot-loader` | Execution full snapshot loader (minimal top-level section check) |
 
 **Typical build order (high level):** `media-listing-pipeline` → `media-listing-execution-fixture` (when a script uses the fixture) → `media-listing-execution-planner` → `media-listing-execution-runner` → `media-listing-execution-report` → `media-listing-execution-bundle` → then the `node scripts/...` step where applicable.
 
@@ -139,3 +140,9 @@ PHASE_04 — identity-application
 - **Bundle depends on report** — `media-listing-execution-bundle` imports `media-listing-execution-report`; build report before bundle.
 
 **Do not rely on stale workspace `dist/` output** — npm script chains in `package.json` are the source of truth for which packages get built before each verify/export; a clean clone should succeed without depending on leftover builds.
+
+---
+
+## PHASE_52 — Deterministic execution full snapshot loader (2026-04-05)
+
+**Append-only note:** Repo-root `verify:media-listing:execution-full-snapshot-loader` runs `scripts/load-execution-full-snapshot.js`, which resolves `artifacts/media-listing-execution-full-snapshot.json` relative to the script (not `process.cwd()`) and verifies minimal top-level aggregate sections: `fixture`, `pipeline`, `plan`, `run`, `report`, `bundle`. Use after `verify:media-listing:execution-full-snapshot` (or equivalent export) so the artifact exists.
