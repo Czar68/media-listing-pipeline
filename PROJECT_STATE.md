@@ -220,3 +220,9 @@ PHASE_04 — identity-application
 ## PHASE_62 — Deterministic execution surface package loader verification (2026-04-05)
 
 **Append-only note:** Repo-root `verify:media-listing:deterministic-execution-surface-package-loader` runs `scripts/verify-deterministic-execution-surface-package-loader.js`, which resolves `artifacts/media-listing-deterministic-execution-surface-package.json` relative to the script (not `process.cwd()`) and verifies the four top-level keys and `relativePath` strings. Use after `export:media-listing:deterministic-execution-surface-package` so the artifact exists.
+
+---
+
+## PHASE_63 — Deterministic execution surface package contract verification (2026-04-05)
+
+**Append-only note:** Checked-in `artifacts/media-listing-deterministic-execution-surface-package-contract.json` records the expected surface package shape (same four keys and `relativePath` values as the loader). `export:media-listing:deterministic-execution-surface-package-contract` derives it only from `artifacts/media-listing-deterministic-execution-surface-package.json`. `verify:media-listing:deterministic-execution-surface-package-contract` compares the surface package artifact to that contract. Run surface package export first, then contract export, then contract verify when updating either artifact.
