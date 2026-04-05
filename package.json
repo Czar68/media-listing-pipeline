@@ -17,6 +17,8 @@
     "verify:media-listing:execution-bundle": "npm run build -w @media-listing/media-listing-pipeline && npm run build -w @media-listing/media-listing-execution-fixture && npm run build -w @media-listing/media-listing-execution-planner && npm run build -w @media-listing/media-listing-execution-runner && npm run build -w @media-listing/media-listing-execution-report && npm run build -w @media-listing/media-listing-execution-bundle && node scripts/export-execution-bundle.js",
     "verify:media-listing:execution-bundle-package": "npm run build -w @media-listing/media-listing-pipeline && npm run build -w @media-listing/media-listing-execution-fixture && npm run build -w @media-listing/media-listing-execution-planner && npm run build -w @media-listing/media-listing-execution-runner && npm run build -w @media-listing/media-listing-execution-report && npm run build -w @media-listing/media-listing-execution-bundle",
     "verify:media-listing:execution-full-snapshot": "npm run build -w @media-listing/media-listing-pipeline && npm run build -w @media-listing/media-listing-execution-fixture && npm run build -w @media-listing/media-listing-execution-planner && npm run build -w @media-listing/media-listing-execution-runner && npm run build -w @media-listing/media-listing-execution-report && npm run build -w @media-listing/media-listing-execution-bundle && node scripts/export-execution-full-snapshot.js",
-    "verify:media-listing:execution-full-snapshot-loader": "node scripts/load-execution-full-snapshot.js"
+    "verify:media-listing:execution-full-snapshot-loader": "node scripts/load-execution-full-snapshot.js",
+    "export:media-listing:execution-full-snapshot-contract": "node scripts/export-execution-full-snapshot-contract.js",
+    "verify:media-listing:execution-full-snapshot-contract": "npm run export:media-listing:execution-full-snapshot-contract && node scripts/verify-execution-full-snapshot-contract.js"
   }
 }

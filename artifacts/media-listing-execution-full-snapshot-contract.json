@@ -1,0 +1,11 @@
+{
+  "artifact": "media-listing-execution-full-snapshot.json",
+  "requiredTopLevelSections": [
+    "fixture",
+    "pipeline",
+    "plan",
+    "run",
+    "report",
+    "bundle"
+  ]
+}

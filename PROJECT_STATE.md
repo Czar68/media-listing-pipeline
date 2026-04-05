@@ -131,6 +131,8 @@ PHASE_04 — identity-application
 | `verify:media-listing:execution-bundle-package` | Build planner → runner → report → bundle packages only (no fixture script) |
 | `verify:media-listing:execution-full-snapshot` | Execution full snapshot JSON verify |
 | `verify:media-listing:execution-full-snapshot-loader` | Execution full snapshot loader (minimal top-level section check) |
+| `export:media-listing:execution-full-snapshot-contract` | Deterministic execution full snapshot contract JSON export |
+| `verify:media-listing:execution-full-snapshot-contract` | Contract verify for full snapshot (runs contract export first) |
 
 **Typical build order (high level):** `media-listing-pipeline` → `media-listing-execution-fixture` (when a script uses the fixture) → `media-listing-execution-planner` → `media-listing-execution-runner` → `media-listing-execution-report` → `media-listing-execution-bundle` → then the `node scripts/...` step where applicable.
 
@@ -146,3 +148,9 @@ PHASE_04 — identity-application
 ## PHASE_52 — Deterministic execution full snapshot loader (2026-04-05)
 
 **Append-only note:** Repo-root `verify:media-listing:execution-full-snapshot-loader` runs `scripts/load-execution-full-snapshot.js`, which resolves `artifacts/media-listing-execution-full-snapshot.json` relative to the script (not `process.cwd()`) and verifies minimal top-level aggregate sections: `fixture`, `pipeline`, `plan`, `run`, `report`, `bundle`. Use after `verify:media-listing:execution-full-snapshot` (or equivalent export) so the artifact exists.
+
+---
+
+## PHASE_53 — Deterministic execution full snapshot contract verification (2026-04-05)
+
+**Append-only note:** Checked-in `artifacts/media-listing-execution-full-snapshot-contract.json` describes the required top-level sections for `media-listing-execution-full-snapshot.json`. `export:media-listing:execution-full-snapshot-contract` writes that contract; `verify:media-listing:execution-full-snapshot-contract` re-exports the contract then runs `scripts/verify-execution-full-snapshot-contract.js`, which resolves both paths relative to the script and fails if the snapshot is missing any contract-required keys. Run after the full snapshot exists (for example via `verify:media-listing:execution-full-snapshot`).
