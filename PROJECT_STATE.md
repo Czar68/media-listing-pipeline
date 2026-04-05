@@ -129,7 +129,7 @@ PHASE_04 — identity-application
 | `verify:media-listing:execution-report` | Report artifact verify |
 | `verify:media-listing:execution-bundle` | Bundle JSON export verify |
 | `verify:media-listing:execution-bundle-package` | Build planner → runner → report → bundle packages only (no fixture script) |
-| `verify:media-listing:full-execution-snapshot` | Full snapshot JSON verify |
+| `verify:media-listing:execution-full-snapshot` | Full snapshot JSON verify |
 
 **Typical build order (high level):** `media-listing-pipeline` → `media-listing-execution-fixture` (when a script uses the fixture) → `media-listing-execution-planner` → `media-listing-execution-runner` → `media-listing-execution-report` → `media-listing-execution-bundle` → then the `node scripts/...` step where applicable.
 
