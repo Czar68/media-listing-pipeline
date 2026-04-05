@@ -138,6 +138,8 @@ PHASE_04 — identity-application
 | `verify:media-listing:deterministic-execution-stack` | Aggregate verifier: runs the deterministic execution verification ladder in order, ending at full snapshot |
 | `export:media-listing:deterministic-execution-stack-package` | Writes stack contract package JSON (stable artifact path references) |
 | `verify:media-listing:deterministic-execution-stack-package-loader` | Deterministic execution stack package loader (shape of checked-in stack package artifact) |
+| `export:media-listing:deterministic-execution-stack-package-contract` | Writes checked-in contract JSON derived from the stack package artifact |
+| `verify:media-listing:deterministic-execution-stack-package-contract` | Compares stack package artifact to checked-in contract |
 
 **Typical build order (high level):** `media-listing-pipeline` → `media-listing-execution-fixture` (when a script uses the fixture) → `media-listing-execution-planner` → `media-listing-execution-runner` → `media-listing-execution-report` → `media-listing-execution-bundle` → then the `node scripts/...` step where applicable.
 
@@ -183,3 +185,9 @@ PHASE_04 — identity-application
 ## PHASE_57 — Deterministic execution stack package loader verification (2026-04-05)
 
 **Append-only note:** Repo-root `verify:media-listing:deterministic-execution-stack-package-loader` runs `scripts/verify-deterministic-execution-stack-package-loader.js`, which resolves `artifacts/media-listing-deterministic-execution-stack-package.json` relative to the script (not `process.cwd()`) and verifies the fixed top-level keys and `relativePath` entries for the stack package contract. Use after `export:media-listing:deterministic-execution-stack-package` (with prerequisites satisfied) so the artifact matches the exporter output.
+
+---
+
+## PHASE_58 — Deterministic execution stack package contract verification (2026-04-05)
+
+**Append-only note:** Checked-in `artifacts/media-listing-deterministic-execution-stack-package-contract.json` records the expected stack package shape (same eight keys and `relativePath` values as the loader). `export:media-listing:deterministic-execution-stack-package-contract` derives it only from `artifacts/media-listing-deterministic-execution-stack-package.json`. `verify:media-listing:deterministic-execution-stack-package-contract` compares the package artifact to that contract. Run stack package export first, then contract export, then contract verify when updating either artifact.
