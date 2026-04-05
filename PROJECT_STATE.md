@@ -238,3 +238,9 @@ PHASE_04 — identity-application
 ## PHASE_65 — Deterministic execution surface package aggregate verifier (2026-04-05)
 
 **Append-only note:** Repo-root `verify:media-listing:deterministic-execution-surface-package` runs the full deterministic execution surface package ladder in order: surface package export, surface package loader, surface package contract export, surface package contract verify, surface package package export, surface package package verify. It is the single gate for that ladder and fails on the first failing step.
+
+---
+
+## PHASE_66 — Top-level deterministic execution verification gate (2026-04-05)
+
+**Append-only note:** Repo-root `verify:media-listing:deterministic-execution` composes the full deterministic execution verification surface: `verify:media-listing:deterministic-execution-surface` first, then `verify:media-listing:deterministic-execution-surface-package`. It is the single repo-root gate for deterministic execution verification and fails on the first failing step.
