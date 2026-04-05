@@ -144,6 +144,7 @@ PHASE_04 — identity-application
 | `verify:media-listing:deterministic-execution-stack-package-package` | Compares stack package contract to checked-in package artifact |
 | `verify:media-listing:deterministic-execution-surface` | Aggregate verifier: deterministic execution stack plus stack-package export/verify ladder |
 | `export:media-listing:deterministic-execution-surface-package` | Writes checked-in surface package JSON (paths to final verification artifacts) |
+| `verify:media-listing:deterministic-execution-surface-package-loader` | Deterministic execution surface package loader (shape of checked-in surface package artifact) |
 
 **Typical build order (high level):** `media-listing-pipeline` → `media-listing-execution-fixture` (when a script uses the fixture) → `media-listing-execution-planner` → `media-listing-execution-runner` → `media-listing-execution-report` → `media-listing-execution-bundle` → then the `node scripts/...` step where applicable.
 
@@ -213,3 +214,9 @@ PHASE_04 — identity-application
 ## PHASE_61 — Deterministic execution surface package export (2026-04-05)
 
 **Append-only note:** `export:media-listing:deterministic-execution-surface-package` writes checked-in `artifacts/media-listing-deterministic-execution-surface-package.json`, a minimal map of `relativePath` entries to the four final verification artifacts (full snapshot contract/package, stack package contract/package). It reads each file only to require existence and valid JSON; the surface package stores paths only. Ensure those artifacts exist (for example via the surface verifier or prior exports) before exporting.
+
+---
+
+## PHASE_62 — Deterministic execution surface package loader verification (2026-04-05)
+
+**Append-only note:** Repo-root `verify:media-listing:deterministic-execution-surface-package-loader` runs `scripts/verify-deterministic-execution-surface-package-loader.js`, which resolves `artifacts/media-listing-deterministic-execution-surface-package.json` relative to the script (not `process.cwd()`) and verifies the four top-level keys and `relativePath` strings. Use after `export:media-listing:deterministic-execution-surface-package` so the artifact exists.
