@@ -25,6 +25,7 @@ const TRANSITIVE_DETERMINISTIC_EXECUTION_VERIFIERS = new Set([
 const EXCLUDED_FROM_INVENTORY_VERIFIER_LIST = new Set([
   'verify:media-listing:deterministic-execution-coverage',
   'verify:media-listing:deterministic-execution-audit',
+  'verify:media-listing:deterministic-execution-script-wiring',
 ]);
 
 const GIT_LS_FILES_GLOBS = [
