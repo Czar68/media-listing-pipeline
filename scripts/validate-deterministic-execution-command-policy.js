@@ -30,6 +30,7 @@ const DIRECT_EXACT_BODY = new Map([
   ['verify:media-listing:deterministic-execution-coverage', 'node scripts/validate-deterministic-execution-coverage.js'],
   ['verify:media-listing:deterministic-execution-script-wiring', 'node scripts/validate-deterministic-execution-script-wiring.js'],
   ['verify:media-listing:deterministic-execution-command-policy', 'node scripts/validate-deterministic-execution-command-policy.js'],
+  ['verify:media-listing:deterministic-execution-command-topology', 'node scripts/validate-deterministic-execution-command-topology.js'],
   ['verify:media-listing:deterministic-execution-contract', 'node scripts/verify-deterministic-execution-contract.js'],
   ['verify:media-listing:deterministic-execution-package', 'node scripts/verify-deterministic-execution-package.js'],
   ['verify:media-listing:deterministic-execution-stack-package-loader', 'node scripts/verify-deterministic-execution-stack-package-loader.js'],

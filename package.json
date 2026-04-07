@@ -42,6 +42,7 @@
     "verify:media-listing:deterministic-execution-coverage": "node scripts/validate-deterministic-execution-coverage.js",
     "verify:media-listing:deterministic-execution-script-wiring": "node scripts/validate-deterministic-execution-script-wiring.js",
     "verify:media-listing:deterministic-execution-command-policy": "node scripts/validate-deterministic-execution-command-policy.js",
+    "verify:media-listing:deterministic-execution-command-topology": "node scripts/validate-deterministic-execution-command-topology.js",
     "verify:media-listing:deterministic-execution-audit": "npm run verify:media-listing:deterministic-execution-inventory && npm run verify:media-listing:deterministic-execution-coverage && npm run verify:media-listing:deterministic-execution",
     "export:media-listing:deterministic-execution-contract": "node scripts/export-deterministic-execution-contract.js",
     "verify:media-listing:deterministic-execution-contract": "node scripts/verify-deterministic-execution-contract.js",

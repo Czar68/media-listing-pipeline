@@ -27,6 +27,7 @@ const EXCLUDED_FROM_INVENTORY_VERIFIER_LIST = new Set([
   'verify:media-listing:deterministic-execution-audit',
   'verify:media-listing:deterministic-execution-script-wiring',
   'verify:media-listing:deterministic-execution-command-policy',
+  'verify:media-listing:deterministic-execution-command-topology',
 ]);
 
 const GIT_LS_FILES_GLOBS = [
