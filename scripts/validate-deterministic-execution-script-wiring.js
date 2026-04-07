@@ -33,6 +33,7 @@ const EXPECTED_DIRECT_WIRES = [
   ['verify:media-listing:deterministic-execution-inventory', 'scripts/validate-deterministic-execution-inventory.js'],
   ['verify:media-listing:deterministic-execution-coverage', 'scripts/validate-deterministic-execution-coverage.js'],
   ['verify:media-listing:deterministic-execution-script-wiring', 'scripts/validate-deterministic-execution-script-wiring.js'],
+  ['verify:media-listing:deterministic-execution-command-policy', 'scripts/validate-deterministic-execution-command-policy.js'],
   ['verify:media-listing:deterministic-execution-contract', 'scripts/verify-deterministic-execution-contract.js'],
   ['verify:media-listing:deterministic-execution-package', 'scripts/verify-deterministic-execution-package.js'],
   ['verify:media-listing:deterministic-execution-stack-package-loader', 'scripts/verify-deterministic-execution-stack-package-loader.js'],
