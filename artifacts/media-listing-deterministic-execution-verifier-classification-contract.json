@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "directVerifierCommands": [
+    "verify:media-listing:deterministic-execution-command-policy",
+    "verify:media-listing:deterministic-execution-command-topology",
+    "verify:media-listing:deterministic-execution-contract",
+    "verify:media-listing:deterministic-execution-coverage",
+    "verify:media-listing:deterministic-execution-inventory",
+    "verify:media-listing:deterministic-execution-package",
+    "verify:media-listing:deterministic-execution-script-wiring",
+    "verify:media-listing:deterministic-execution-stack-package-contract",
+    "verify:media-listing:deterministic-execution-stack-package-loader",
+    "verify:media-listing:deterministic-execution-stack-package-package",
+    "verify:media-listing:deterministic-execution-surface-package-contract",
+    "verify:media-listing:deterministic-execution-surface-package-loader",
+    "verify:media-listing:deterministic-execution-surface-package-package",
+    "verify:media-listing:deterministic-execution-verifier-classification"
+  ],
+  "excludedFromInventoryCommands": [
+    "verify:media-listing:deterministic-execution-audit",
+    "verify:media-listing:deterministic-execution-command-policy",
+    "verify:media-listing:deterministic-execution-command-topology",
+    "verify:media-listing:deterministic-execution-coverage",
+    "verify:media-listing:deterministic-execution-script-wiring",
+    "verify:media-listing:deterministic-execution-verifier-classification"
+  ],
+  "metaCommands": [
+    "verify:media-listing:deterministic-execution",
+    "verify:media-listing:deterministic-execution-audit",
+    "verify:media-listing:deterministic-execution-stack",
+    "verify:media-listing:deterministic-execution-surface",
+    "verify:media-listing:deterministic-execution-surface-package"
+  ]
+}
