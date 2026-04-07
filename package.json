@@ -39,6 +39,7 @@
     "verify:media-listing:deterministic-execution-surface-package": "npm run export:media-listing:deterministic-execution-surface-package && npm run verify:media-listing:deterministic-execution-surface-package-loader && npm run export:media-listing:deterministic-execution-surface-package-contract && npm run verify:media-listing:deterministic-execution-surface-package-contract && npm run export:media-listing:deterministic-execution-surface-package-package && npm run verify:media-listing:deterministic-execution-surface-package-package",
     "verify:media-listing:deterministic-execution": "npm run verify:media-listing:deterministic-execution-contract && npm run verify:media-listing:deterministic-execution-package && npm run verify:media-listing:deterministic-execution-surface && npm run verify:media-listing:deterministic-execution-surface-package",
     "verify:media-listing:deterministic-execution-inventory": "node scripts/validate-deterministic-execution-inventory.js",
+    "verify:media-listing:deterministic-execution-coverage": "node scripts/validate-deterministic-execution-coverage.js",
     "export:media-listing:deterministic-execution-contract": "node scripts/export-deterministic-execution-contract.js",
     "verify:media-listing:deterministic-execution-contract": "node scripts/verify-deterministic-execution-contract.js",
     "export:media-listing:deterministic-execution-package": "node scripts/export-deterministic-execution-package.js",
