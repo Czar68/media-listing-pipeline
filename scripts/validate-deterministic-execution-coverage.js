@@ -23,6 +23,7 @@ const TRANSITIVE_DETERMINISTIC_EXECUTION_VERIFIERS = new Set([
 
 /** Not part of the aggregate gate; omitted from inventory by design (meta repo-root audit commands). */
 const EXCLUDED_FROM_INVENTORY_VERIFIER_LIST = new Set([
+  'verify:media-listing:deterministic-execution-artifact-surface',
   'verify:media-listing:deterministic-execution-coverage',
   'verify:media-listing:deterministic-execution-audit',
   'verify:media-listing:deterministic-execution-script-wiring',
