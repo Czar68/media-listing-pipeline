@@ -67,7 +67,8 @@
     {
       "id": "top-level-deterministic-execution",
       "checkedInPaths": [
-        "artifacts/media-listing-deterministic-execution-inventory-contract.json"
+        "artifacts/media-listing-deterministic-execution-inventory-contract.json",
+        "artifacts/media-listing-deterministic-execution-verifier-classification-contract.json"
       ],
       "verifiers": [
         {
