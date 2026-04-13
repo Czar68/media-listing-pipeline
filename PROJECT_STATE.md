@@ -244,3 +244,11 @@ PHASE_04 — identity-application
 ## PHASE_66 — Top-level deterministic execution verification gate (2026-04-05)
 
 **Append-only note:** Repo-root `verify:media-listing:deterministic-execution` composes the full deterministic execution verification surface: `verify:media-listing:deterministic-execution-surface` first, then `verify:media-listing:deterministic-execution-surface-package`. It is the single repo-root gate for deterministic execution verification and fails on the first failing step.
+
+---
+
+## PHASE_67 - Repo workflow/bootstrap adoption (2026-04-10)
+
+**Append-only note:** Added repo-local workflow/bootstrap assets for the standardized AI execution model: .agents/rules/media-listing-pipeline.md, .agents/rules/phase-implement.md, .agents/rules/phase-review.md, .agents/rules/phase-finalize.md, .agents/rules/phase-acceptance.md, .agents/workflows/repo-phase-execution.md, .skills/media-listing-pipeline/SKILL.md, and AI_WORKFLOW_BOOTSTRAP.md. These establish the repo-local workspace rule, the four standard bounded-phase workflows, the repo skill file, and the bootstrap summary. PROJECT_STATE.md remains append-only and is updated because repo workflow state changed.
+
+
