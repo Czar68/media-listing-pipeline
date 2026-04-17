@@ -251,4 +251,8 @@ PHASE_04 — identity-application
 
 **Append-only note:** Added repo-local workflow/bootstrap assets for the standardized AI execution model: .agents/rules/media-listing-pipeline.md, .agents/rules/phase-implement.md, .agents/rules/phase-review.md, .agents/rules/phase-finalize.md, .agents/rules/phase-acceptance.md, .agents/workflows/repo-phase-execution.md, .skills/media-listing-pipeline/SKILL.md, and AI_WORKFLOW_BOOTSTRAP.md. These establish the repo-local workspace rule, the four standard bounded-phase workflows, the repo skill file, and the bootstrap summary. PROJECT_STATE.md remains append-only and is updated because repo workflow state changed.
 
+---
 
+## EBAY SCANNER V1 — PHASE 1 (2026-04-17)
+
+**Append-only note:** Added `scripts/ebay-scanner-v1.js` as single-item deterministic listing compiler (Production Core). Operational baseline established.
