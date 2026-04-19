@@ -244,14 +244,108 @@ function runLister(rawInput) {
 }
 
 // ------------------------------
-// EXAMPLE
+// PHASE 2 BATCH LAYER
 // ------------------------------
-const example = runLister({
-  title: "The Office",
-  season: 3,
-  discCount: 4,
-  tested: false,
-  conditionTags: []
-});
+function runBatch(items) {
+  const result = {
+    successCount: 0,
+    failCount: 0,
+    totalCount: items.length,
+    results: [],
+    summary: {
+      avgPrice: 0,
+      totalRevenueEstimate: 0,
+      warningsCount: 0,
+      blockerCount: 0
+    }
+  };
 
-console.log(example.output);
+  console.log(`[BATCH START] Processing ${items.length} items`);
+
+  let sumPrice = 0;
+
+  for (let i = 0; i < items.length; i++) {
+    const rawItem = items[i];
+    let itemResult;
+
+    try {
+      const listerResult = runLister(rawItem);
+      
+      const success = listerResult?.success === true;
+      const draft = listerResult?.draft ?? null;
+
+      if (!draft) {
+        itemResult = {
+          success: false,
+          input: rawItem,
+          output: null,
+          draft: null,
+          error: "Missing draft object"
+        };
+        result.failCount++;
+      } else {
+        const warnings = draft.warnings || [];
+        const blockers = draft.blockers || [];
+
+        result.summary.warningsCount += warnings.length;
+        result.summary.blockerCount += blockers.length;
+
+        if (success) {
+          itemResult = {
+            success: true,
+            input: rawItem,
+            output: typeof listerResult.output === 'string' ? listerResult.output : null,
+            draft: draft,
+            error: null
+          };
+          
+          result.successCount++;
+          const price = draft.price;
+          if (typeof price === 'number' && isFinite(price)) {
+            sumPrice += price;
+            result.summary.totalRevenueEstimate += price;
+          }
+        } else {
+          itemResult = {
+            success: false,
+            input: rawItem,
+            output: null,
+            draft: null,
+            error: blockers.length > 0 ? "Validation blockers: " + blockers.join(", ") : "Validation failed"
+          };
+          result.failCount++;
+        }
+      }
+    } catch (err) {
+      itemResult = {
+        success: false,
+        input: rawItem,
+        output: null,
+        draft: null,
+        error: err?.message || String(err)
+      };
+      result.failCount++;
+    }
+
+    result.results.push(itemResult);
+    console.log(`[ITEM ${i + 1}/${items.length}] ${itemResult.success ? "OK" : "FAIL"}`);
+  }
+
+  if (result.successCount > 0) {
+    result.summary.avgPrice = Number((sumPrice / result.successCount).toFixed(2));
+  }
+  
+  result.summary.totalRevenueEstimate = Number(result.summary.totalRevenueEstimate.toFixed(2));
+
+  console.log(`[BATCH SUMMARY] Total: ${result.totalCount} | Success: ${result.successCount} | Failed: ${result.failCount} | Estimated Revenue: $${result.summary.totalRevenueEstimate}`);
+
+  return result;
+}
+
+if (typeof module !== "undefined") {
+  module.exports = {
+    runBatch,
+    runLister,
+    normalizeInventoryItem
+  };
+}
