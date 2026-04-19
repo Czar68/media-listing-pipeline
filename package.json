@@ -50,5 +50,8 @@
     "verify:media-listing:deterministic-execution-contract": "node scripts/verify-deterministic-execution-contract.js",
     "export:media-listing:deterministic-execution-package": "node scripts/export-deterministic-execution-package.js",
     "verify:media-listing:deterministic-execution-package": "node scripts/verify-deterministic-execution-package.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1"
   }
 }
