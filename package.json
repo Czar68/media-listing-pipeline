@@ -4,10 +4,14 @@
   "version": "0.0.0",
   "packageManager": "pnpm@8.0.0",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "adapters/media-pipeline"
   ],
   "scripts": {
     "build": "npm run build -w @media-listing/core-domain && npm run build -w @media-listing/core-condition && npm run build -w @media-listing/core-identity && npm run build -w @media-listing/scan-ingestion && npm run build -w @media-listing/identity-application",
+    "build:adapters-media-pipeline": "npm run build -w @media-listing/adapters-media-pipeline",
+    "validate:ebay-sandbox": "npm run build:adapters-media-pipeline && node scripts/ebay-sandbox-validation-runner.js",
+    "test:ebay-single-item": "npm run build:adapters-media-pipeline && node scripts/ebay-single-item-test.js",
     "test": "npm run test -w @media-listing/core-condition && npm run test -w @media-listing/core-identity && npm run test -w @media-listing/scan-ingestion && npm run test -w @media-listing/identity-application",
     "export:media-listing:pipeline": "npm run build -w @media-listing/media-listing-pipeline && npm run build -w @media-listing/media-listing-execution-fixture && node scripts/media-listing/export-pipeline-snapshot.js",
     "verify:media-listing:execution-fixture-package": "npm run build -w @media-listing/media-listing-pipeline && npm run build -w @media-listing/media-listing-execution-fixture",
@@ -52,6 +56,7 @@
     "verify:media-listing:deterministic-execution-package": "node scripts/verify-deterministic-execution-package.js"
   },
   "dependencies": {
+    "@media-listing/adapters-media-pipeline": "workspace:*",
     "dotenv": "^16.6.1"
   }
 }

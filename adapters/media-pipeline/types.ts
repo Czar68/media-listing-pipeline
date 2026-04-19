@@ -50,3 +50,43 @@ export interface CanonicalMarket {
   marketId: string;
   metadata?: ListingItem["metadata"];
 }
+
+/** Raw scanner output — ingestion only; no trimming, SKU, or marketplace fields. */
+export interface RawScanResult {
+  source: string;
+  externalId?: string;
+  title: string;
+  description?: string;
+  mediaType: "image" | "video" | "audio" | "unknown";
+  files: string[];
+  metadata?: Record<string, unknown>;
+  capturedAt: string;
+}
+
+/** Normalized inventory row produced only by {@link MediaAdapter}. */
+export interface NormalizedInventoryItem {
+  sku: string;
+  title: string;
+  description: string;
+  media: {
+    images: string[];
+    videos: string[];
+  };
+  category?: string;
+  condition: "NEW" | "USED" | "UNSPECIFIED";
+  source: {
+    system: "media-listing-pipeline";
+    origin: string;
+    externalId?: string;
+  };
+  timestamps: {
+    capturedAt: string;
+    normalizedAt: string;
+  };
+  metadata?: Record<string, unknown>;
+}
+
+/** Sole transformation boundary from {@link RawScanResult} to {@link NormalizedInventoryItem}. */
+export interface MediaAdapter {
+  normalize(input: RawScanResult): NormalizedInventoryItem;
+}

@@ -64,3 +64,32 @@ export { canonicalToListing } from "./canonicalToListing";
 export { groupListings } from "./groupListings";
 export type { GroupedListings } from "./groupListings";
 export { runPipeline, validateMediaPipelineInput } from "./run_pipeline";
+
+export type {
+  RawScanResult,
+  NormalizedInventoryItem,
+  MediaAdapter,
+} from "./types";
+export { MediaAdapterImpl, simpleHash } from "./mediaAdapter";
+export { scanBatchRawItems } from "./scanner";
+export type { ScanBatchOptions } from "./scanner";
+export { runBatch } from "./runBatch";
+export type { RunBatchResult } from "./runBatch";
+export { enrichWithEpid } from "./epidEnricher";
+export type { EpidEnrichedInventoryItem } from "./epidEnricher";
+export * as ebayMapper from "./ebayMapper";
+export {
+  toEbayInventoryItem,
+  toEbayInventoryRequestBody,
+} from "./ebayMapper";
+export type {
+  EbayInventoryItem,
+  EbayInventoryProduct,
+  EbayListingCondition,
+} from "./ebayMapper";
+export { executeBatchListings } from "./executeBatchListings";
+export type {
+  ExecutionResult,
+  ExecuteBatchListingsResult,
+  ExecuteBatchListingsInput,
+} from "./executeBatchListings";

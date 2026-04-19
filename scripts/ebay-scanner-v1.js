@@ -1,7 +1,11 @@
 // ========================================
 // EBAY SCANNER V1 — PHASE 1 (PRODUCTION CORE)
 // Single-item deterministic listing compiler
+//
+// Batch path (runBatch): scanner → mediaAdapter.normalize → ebayMapper → api/ebayClient.request()
 // ========================================
+
+const { runBatch: runInventoryBatch } = require("@media-listing/adapters-media-pipeline");
 
 const CONFIG = {
   EBAY_FEE_RATE: 0.153,
@@ -244,102 +248,58 @@ function runLister(rawInput) {
 }
 
 // ------------------------------
-// PHASE 2 BATCH LAYER
+// PHASE 2 BATCH LAYER — scan → adapter → ebayMapper → ebayClient (no listing compiler here)
 // ------------------------------
-function runBatch(items) {
-  const result = {
-    successCount: 0,
-    failCount: 0,
+async function runBatch(items) {
+  console.log(`[BATCH START] Processing ${items.length} items`);
+
+  const { rawScanResults, normalizedInventoryItems, execution } = await runInventoryBatch(items, {
+    defaultSource: "ebay-scanner-v1"
+  });
+
+  const results = normalizedInventoryItems.map((normalized, i) => {
+    const ok = execution.success.find((s) => s.item.sku === normalized.sku);
+    const bad = execution.failed.find((f) => f.item.sku === normalized.sku);
+    return {
+      success: Boolean(ok),
+      input: items[i],
+      rawScan: rawScanResults[i],
+      normalized,
+      ebayPayload: ok?.ebayPayload ?? bad?.ebayPayload,
+      apiError: bad?.error ?? null,
+      output: null,
+      draft: null,
+      error: bad?.error ?? null
+    };
+  });
+
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i];
+    console.log(`[ITEM ${i + 1}/${items.length}] ${r.success ? "OK (eBay)" : "FAIL"}`);
+  }
+
+  console.log(
+    `[BATCH SUMMARY] Total: ${items.length} | Normalized: ${normalizedInventoryItems.length} | eBay OK: ${execution.success.length} | eBay FAIL: ${execution.failed.length}`
+  );
+
+  return {
+    successCount: execution.success.length,
+    failCount: execution.failed.length,
     totalCount: items.length,
-    results: [],
+    results,
+    rawScanResults,
+    normalizedInventoryItems,
+    execution,
     summary: {
+      normalizedCount: normalizedInventoryItems.length,
+      ebayListed: execution.success.length,
+      ebayFailed: execution.failed.length,
       avgPrice: 0,
       totalRevenueEstimate: 0,
       warningsCount: 0,
       blockerCount: 0
     }
   };
-
-  console.log(`[BATCH START] Processing ${items.length} items`);
-
-  let sumPrice = 0;
-
-  for (let i = 0; i < items.length; i++) {
-    const rawItem = items[i];
-    let itemResult;
-
-    try {
-      const listerResult = runLister(rawItem);
-      
-      const success = listerResult?.success === true;
-      const draft = listerResult?.draft ?? null;
-
-      if (!draft) {
-        itemResult = {
-          success: false,
-          input: rawItem,
-          output: null,
-          draft: null,
-          error: "Missing draft object"
-        };
-        result.failCount++;
-      } else {
-        const warnings = draft.warnings || [];
-        const blockers = draft.blockers || [];
-
-        result.summary.warningsCount += warnings.length;
-        result.summary.blockerCount += blockers.length;
-
-        if (success) {
-          itemResult = {
-            success: true,
-            input: rawItem,
-            output: typeof listerResult.output === 'string' ? listerResult.output : null,
-            draft: draft,
-            error: null
-          };
-          
-          result.successCount++;
-          const price = draft.price;
-          if (typeof price === 'number' && isFinite(price)) {
-            sumPrice += price;
-            result.summary.totalRevenueEstimate += price;
-          }
-        } else {
-          itemResult = {
-            success: false,
-            input: rawItem,
-            output: null,
-            draft: null,
-            error: blockers.length > 0 ? "Validation blockers: " + blockers.join(", ") : "Validation failed"
-          };
-          result.failCount++;
-        }
-      }
-    } catch (err) {
-      itemResult = {
-        success: false,
-        input: rawItem,
-        output: null,
-        draft: null,
-        error: err?.message || String(err)
-      };
-      result.failCount++;
-    }
-
-    result.results.push(itemResult);
-    console.log(`[ITEM ${i + 1}/${items.length}] ${itemResult.success ? "OK" : "FAIL"}`);
-  }
-
-  if (result.successCount > 0) {
-    result.summary.avgPrice = Number((sumPrice / result.successCount).toFixed(2));
-  }
-  
-  result.summary.totalRevenueEstimate = Number(result.summary.totalRevenueEstimate.toFixed(2));
-
-  console.log(`[BATCH SUMMARY] Total: ${result.totalCount} | Success: ${result.successCount} | Failed: ${result.failCount} | Estimated Revenue: $${result.summary.totalRevenueEstimate}`);
-
-  return result;
 }
 
 if (typeof module !== "undefined") {
