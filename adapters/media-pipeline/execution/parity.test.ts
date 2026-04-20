@@ -82,11 +82,13 @@ async function testParity() {
 function validateExecutionSuccess(success: ExecutionSuccess): void {
   const successKeys = getObjectKeys(success).sort();
   
-  if (successKeys.length === 3 && 
+  if (successKeys.length === 5 && 
       successKeys.includes('item') && 
       successKeys.includes('ebayPayload') && 
-      successKeys.includes('response')) {
-    console.log('✓ ExecutionSuccess has correct fields (item, ebayPayload, response)');
+      successKeys.includes('response') &&
+      successKeys.includes('recovered') &&
+      successKeys.includes('retryCount')) {
+    console.log('✓ ExecutionSuccess has correct fields (item, ebayPayload, response, recovered, retryCount)');
   } else {
     console.error('✗ ExecutionSuccess has unexpected fields:', successKeys);
     process.exit(1);
@@ -110,17 +112,35 @@ function validateExecutionSuccess(success: ExecutionSuccess): void {
     process.exit(1);
   }
 
+  // Validate recovered field
+  if (typeof success.recovered === 'boolean') {
+    console.log('✓ ExecutionSuccess has valid recovered field:', success.recovered);
+  } else {
+    console.error('✗ ExecutionSuccess recovered field is not a boolean');
+    process.exit(1);
+  }
+
+  // Validate retryCount field
+  if (typeof success.retryCount === 'number') {
+    console.log('✓ ExecutionSuccess has valid retryCount field:', success.retryCount);
+  } else {
+    console.error('✗ ExecutionSuccess retryCount field is not a number');
+    process.exit(1);
+  }
+
   console.log();
 }
 
 function validateExecutionFailed(failed: ExecutionFailed): void {
   const failedKeys = getObjectKeys(failed).sort();
   
-  if (failedKeys.length === 3 && 
+  if (failedKeys.length === 5 && 
       failedKeys.includes('item') && 
       failedKeys.includes('ebayPayload') && 
-      failedKeys.includes('error')) {
-    console.log('✓ ExecutionFailed has correct fields (item, ebayPayload, error)');
+      failedKeys.includes('error') &&
+      failedKeys.includes('recovered') &&
+      failedKeys.includes('retryCount')) {
+    console.log('✓ ExecutionFailed has correct fields (item, ebayPayload, error, recovered, retryCount)');
   } else {
     console.error('✗ ExecutionFailed has unexpected fields:', failedKeys);
     process.exit(1);
@@ -163,6 +183,22 @@ function validateExecutionFailed(failed: ExecutionFailed): void {
   // Validate optional field: raw
   if (errorKeys.includes('raw')) {
     console.log('✓ Error has raw field (optional debug field)');
+  }
+
+  // Validate recovered field
+  if (typeof failed.recovered === 'boolean') {
+    console.log('✓ ExecutionFailed has valid recovered field:', failed.recovered);
+  } else {
+    console.error('✗ ExecutionFailed recovered field is not a boolean');
+    process.exit(1);
+  }
+
+  // Validate retryCount field
+  if (typeof failed.retryCount === 'number') {
+    console.log('✓ ExecutionFailed has valid retryCount field:', failed.retryCount);
+  } else {
+    console.error('✗ ExecutionFailed retryCount field is not a number');
+    process.exit(1);
   }
 
   console.log();

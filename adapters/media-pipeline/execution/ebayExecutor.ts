@@ -33,66 +33,107 @@ export class EbayExecutor implements ListingExecutionAdapter {
     ebayPayload: EbayInventoryItem;
   }): Promise<ExecutionSuccess | ExecutionFailed> {
     const { item, ebayPayload } = input;
+    let retryCount = 0;
 
     try {
-      const inventoryRequestBody = this.buildInventoryRequestBody(ebayPayload);
-      const response = await this.createInventoryItem(inventoryRequestBody);
-
-      const offerBody = {
-        sku: ebayPayload.sku,
-        marketplaceId: 'EBAY_US',
-        format: 'FIXED_PRICE',
-        availableQuantity: 1,
-        pricingSummary: {
-          price: {
-            value: '9.99',
-            currency: 'USD'
-          }
-        }
-      };
-
-      let offerId: string;
-      try {
-        const offerResponse = await this.createOffer(offerBody);
-        offerId = (offerResponse as { data?: { offerId?: string } }).data?.offerId || 
-                  (offerResponse as { offerId?: string }).offerId || 
-                  ebayPayload.sku;
-      } catch (offerErr: unknown) {
-        // If offer already exists, extract offerId from error parameters
-        const err = offerErr as { context?: { bodyPreview?: string } };
-        const bodyPreview = err.context?.bodyPreview;
-        if (bodyPreview && bodyPreview.includes('already exists')) {
-          try {
-            const errorBody = JSON.parse(bodyPreview);
-            const offerIdParam = errorBody.errors?.[0]?.parameters?.find((p: { name: string }) => p.name === 'offerId');
-            if (offerIdParam?.value) {
-              offerId = offerIdParam.value;
-            } else {
-              throw offerErr;
-            }
-          } catch {
-            throw offerErr;
-          }
-        } else {
-          throw offerErr;
-        }
-      }
-
-      await this.publishOffer(offerId);
-
-      return {
-        item,
-        ebayPayload,
-        response: this.normalizeResponse(response),
-      };
+      const result = await this.executeWithRetry(item, ebayPayload, retryCount);
+      return result;
     } catch (err) {
       const error: ExecutionError = this.classifyError(err);
+      
+      // Attempt retry only for VALIDATION_ERROR
+      if (error.type === 'VALIDATION_ERROR' && retryCount === 0) {
+        retryCount++;
+        const correctedPayload = this.attemptPayloadCorrection(ebayPayload, error);
+        
+        try {
+          const result = await this.executeWithRetry(item, correctedPayload, retryCount);
+          // Add recovery metadata
+          if ('error' in result) {
+            (result as ExecutionFailed).retryCount = retryCount;
+            return result;
+          } else {
+            (result as ExecutionSuccess).recovered = true;
+            (result as ExecutionSuccess).retryCount = retryCount;
+            return result;
+          }
+        } catch (retryErr) {
+          const retryError: ExecutionError = this.classifyError(retryErr);
+          return {
+            item,
+            ebayPayload: correctedPayload,
+            error: retryError,
+            retryCount,
+          };
+        }
+      }
+      
       return {
         item,
         ebayPayload,
         error,
+        retryCount,
       };
     }
+  }
+
+  private async executeWithRetry(
+    item: NormalizedInventoryItem,
+    ebayPayload: EbayInventoryItem,
+    retryCount: number
+  ): Promise<ExecutionSuccess | ExecutionFailed> {
+    const inventoryRequestBody = this.buildInventoryRequestBody(ebayPayload);
+    const response = await this.createInventoryItem(inventoryRequestBody);
+
+    const offerBody = {
+      sku: ebayPayload.sku,
+      marketplaceId: 'EBAY_US',
+      format: 'FIXED_PRICE',
+      availableQuantity: 1,
+      pricingSummary: {
+        price: {
+          value: '9.99',
+          currency: 'USD'
+        }
+      }
+    };
+
+    let offerId: string;
+    try {
+      const offerResponse = await this.createOffer(offerBody);
+      offerId = (offerResponse as { data?: { offerId?: string } }).data?.offerId || 
+                (offerResponse as { offerId?: string }).offerId || 
+                ebayPayload.sku;
+    } catch (offerErr: unknown) {
+      // If offer already exists, extract offerId from error parameters
+      const err = offerErr as { context?: { bodyPreview?: string } };
+      const bodyPreview = err.context?.bodyPreview;
+      if (bodyPreview && bodyPreview.includes('already exists')) {
+        try {
+          const errorBody = JSON.parse(bodyPreview);
+          const offerIdParam = errorBody.errors?.[0]?.parameters?.find((p: { name: string }) => p.name === 'offerId');
+          if (offerIdParam?.value) {
+            offerId = offerIdParam.value;
+          } else {
+            throw offerErr;
+          }
+        } catch {
+          throw offerErr;
+        }
+      } else {
+        throw offerErr;
+      }
+    }
+
+    await this.publishOffer(offerId);
+
+    return {
+      item,
+      ebayPayload,
+      response: this.normalizeResponse(response),
+      recovered: retryCount > 0,
+      retryCount,
+    };
   }
 
   private async createInventoryItem(item: EbayInventoryItem): Promise<unknown> {
@@ -242,5 +283,25 @@ export class EbayExecutor implements ListingExecutionAdapter {
     const prefix = `[${type}]`;
     const code = errorId ? ` (${errorId})` : '';
     return `${prefix}${code}: ${originalMessage}`;
+  }
+
+  private attemptPayloadCorrection(payload: EbayInventoryItem, error: ExecutionError): EbayInventoryItem {
+    const corrected = { ...payload };
+    
+    // Check error message for specific missing fields
+    const message = error.message.toLowerCase();
+    
+    // Add country if missing and error suggests it's needed
+    if (message.includes('country') && !corrected.sourceMetadata.category) {
+      corrected.sourceMetadata = {
+        ...corrected.sourceMetadata,
+        category: 'US',
+      };
+    }
+    
+    // Add other safe defaults as needed based on error patterns
+    // This can be extended with more specific corrections based on actual API errors
+    
+    return corrected;
   }
 }

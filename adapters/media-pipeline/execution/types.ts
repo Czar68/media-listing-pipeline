@@ -28,12 +28,16 @@ export interface ExecutionSuccess {
     status?: number;
     data?: unknown;
   };
+  recovered?: boolean;
+  retryCount?: number;
 }
 
 export interface ExecutionFailed {
   item: NormalizedInventoryItem;
   ebayPayload: EbayInventoryItem;
   error: ExecutionError;
+  recovered?: boolean;
+  retryCount?: number;
 }
 
 export interface ExecutionResult {

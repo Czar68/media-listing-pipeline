@@ -44,6 +44,8 @@ export class MockExecutor implements ListingExecutionAdapter {
         item,
         ebayPayload,
         response: this.normalizeResponse(response),
+        recovered: false,
+        retryCount: 0,
       };
     } catch (err) {
       const error: ExecutionError = {
@@ -55,6 +57,8 @@ export class MockExecutor implements ListingExecutionAdapter {
         item,
         ebayPayload,
         error,
+        recovered: false,
+        retryCount: 0,
       };
     }
   }
