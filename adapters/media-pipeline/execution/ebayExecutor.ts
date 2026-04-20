@@ -2,7 +2,7 @@ import * as path from 'path';
 import type { NormalizedInventoryItem } from '../types';
 import type { EbayInventoryItem } from '../ebayMapper';
 import { ListingExecutionAdapter } from './executor';
-import type { ExecutionSuccess, ExecutionFailed, ExecutionError } from './types';
+import type { ExecutionSuccess, ExecutionFailed, ExecutionError, ErrorType } from './types';
 
 /**
  * eBay implementation of the listing execution adapter
@@ -86,10 +86,7 @@ export class EbayExecutor implements ListingExecutionAdapter {
         response: this.normalizeResponse(response),
       };
     } catch (err) {
-      const error: ExecutionError = {
-        message: err instanceof Error ? err.message : String(err),
-        raw: err,
-      };
+      const error: ExecutionError = this.classifyError(err);
       return {
         item,
         ebayPayload,
@@ -167,5 +164,83 @@ export class EbayExecutor implements ListingExecutionAdapter {
       status: typeof response.status === 'number' ? response.status : undefined,
       data: response.data !== undefined ? response.data : rawResponse,
     };
+  }
+
+  private classifyError(err: unknown): ExecutionError {
+    const message = err instanceof Error ? err.message : String(err);
+    
+    // Extract error details from eBay API response format
+    const errorObj = err as Record<string, unknown>;
+    const statusCode = typeof errorObj.status === 'number' ? errorObj.status : undefined;
+    const errorId = this.extractErrorId(errorObj);
+    
+    // Classify error type
+    const type = this.determineErrorType(errorObj, statusCode, message);
+    
+    return {
+      type,
+      message: this.formatErrorMessage(type, message, errorId),
+      code: errorId || statusCode,
+      raw: err,
+    };
+  }
+
+  private determineErrorType(errorObj: Record<string, unknown>, statusCode: number | undefined, message: string): ErrorType {
+    // Check for authentication errors
+    if (statusCode === 401 || statusCode === 403) {
+      return 'AUTH_ERROR';
+    }
+    
+    // Check for rate limiting
+    if (statusCode === 429) {
+      return 'RATE_LIMIT';
+    }
+    
+    // Check for network errors
+    if (message.includes('ECONNREFUSED') || 
+        message.includes('ENOTFOUND') || 
+        message.includes('ETIMEDOUT') ||
+        message.includes('network') ||
+        message.includes('fetch')) {
+      return 'NETWORK_ERROR';
+    }
+    
+    // Check for sandbox limitations
+    if (message.includes('sandbox') || message.includes('Sandbox')) {
+      return 'SANDBOX_LIMITATION';
+    }
+    
+    // Check for validation errors
+    if (statusCode === 400 || 
+        message.includes('validation') || 
+        message.includes('invalid') ||
+        message.includes('required')) {
+      return 'VALIDATION_ERROR';
+    }
+    
+    // Default to unknown
+    return 'UNKNOWN';
+  }
+
+  private extractErrorId(errorObj: Record<string, unknown>): string | undefined {
+    // Try to extract eBay error ID from common response formats
+    if (errorObj.errors && Array.isArray(errorObj.errors)) {
+      const firstError = (errorObj.errors as Record<string, unknown>[])[0];
+      if (firstError && typeof firstError.errorId === 'string') {
+        return firstError.errorId;
+      }
+    }
+    
+    if (typeof errorObj.errorId === 'string') {
+      return errorObj.errorId;
+    }
+    
+    return undefined;
+  }
+
+  private formatErrorMessage(type: ErrorType, originalMessage: string, errorId?: string): string {
+    const prefix = `[${type}]`;
+    const code = errorId ? ` (${errorId})` : '';
+    return `${prefix}${code}: ${originalMessage}`;
   }
 }

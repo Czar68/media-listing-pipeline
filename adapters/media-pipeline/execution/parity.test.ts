@@ -8,7 +8,7 @@
 import { MockExecutor } from './mockExecutor';
 import type { NormalizedInventoryItem } from '../types';
 import type { EbayInventoryItem } from '../ebayMapper';
-import type { ExecutionSuccess, ExecutionFailed } from './types';
+import type { ExecutionSuccess, ExecutionFailed, ErrorType } from './types';
 
 function getObjectKeys(obj: unknown): string[] {
   if (obj === null || typeof obj !== 'object') {
@@ -126,14 +126,43 @@ function validateExecutionFailed(failed: ExecutionFailed): void {
     process.exit(1);
   }
 
-  // Validate error structure
+  // Validate error classification structure
   const error = failed.error as unknown as Record<string, unknown>;
   const errorKeys = getObjectKeys(error).sort();
+  
+  console.log('Error fields:', errorKeys);
+
+  // Validate required field: type
+  if (errorKeys.includes('type')) {
+    const errorType = error.type as string;
+    const validTypes: ErrorType[] = ['AUTH_ERROR', 'VALIDATION_ERROR', 'SANDBOX_LIMITATION', 'RATE_LIMIT', 'NETWORK_ERROR', 'UNKNOWN'];
+    if (validTypes.includes(errorType as ErrorType)) {
+      console.log('✓ Error has valid type field:', errorType);
+    } else {
+      console.error('✗ Error type is invalid:', errorType);
+      process.exit(1);
+    }
+  } else {
+    console.error('✗ Error missing type field');
+    process.exit(1);
+  }
+
+  // Validate required field: message
   if (errorKeys.includes('message')) {
     console.log('✓ Error has message field');
   } else {
     console.error('✗ Error missing message field');
     process.exit(1);
+  }
+
+  // Validate optional field: code
+  if (errorKeys.includes('code')) {
+    console.log('✓ Error has code field (optional)');
+  }
+
+  // Validate optional field: raw
+  if (errorKeys.includes('raw')) {
+    console.log('✓ Error has raw field (optional debug field)');
   }
 
   console.log();

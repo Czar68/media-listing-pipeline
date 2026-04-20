@@ -1,7 +1,7 @@
 import type { NormalizedInventoryItem } from '../types';
 import type { EbayInventoryItem } from '../ebayMapper';
 import { ListingExecutionAdapter } from './executor';
-import type { ExecutionSuccess, ExecutionFailed, ExecutionError } from './types';
+import type { ExecutionSuccess, ExecutionFailed, ExecutionError, ErrorType } from './types';
 
 /**
  * Mock implementation of the listing execution adapter
@@ -47,6 +47,7 @@ export class MockExecutor implements ListingExecutionAdapter {
       };
     } catch (err) {
       const error: ExecutionError = {
+        type: 'UNKNOWN',
         message: err instanceof Error ? err.message : String(err),
         raw: err,
       };

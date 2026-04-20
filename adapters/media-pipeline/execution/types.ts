@@ -6,8 +6,18 @@ import type { EbayInventoryItem } from '../ebayMapper';
  * Ensures MockExecutor and EbayExecutor produce identical shapes
  */
 
+export type ErrorType = 
+  | 'AUTH_ERROR'
+  | 'VALIDATION_ERROR'
+  | 'SANDBOX_LIMITATION'
+  | 'RATE_LIMIT'
+  | 'NETWORK_ERROR'
+  | 'UNKNOWN';
+
 export interface ExecutionError {
+  type: ErrorType;
   message: string;
+  code?: string | number;
   raw?: unknown;
 }
 
