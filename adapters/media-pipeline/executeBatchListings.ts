@@ -1,65 +1,12 @@
-import * as path from "path";
 import {
   toEbayInventoryItem,
-  toEbayInventoryRequestBody,
   type EbayInventoryItem,
 } from "./ebayMapper";
 import type { NormalizedInventoryItem } from "./types";
-
-type EbayClientModule = {
-  request: (opts: {
-    method?: string;
-    url: string;
-    body?: Record<string, unknown>;
-  }) => Promise<unknown>;
-};
-
-function loadEbayClient(): EbayClientModule {
-  try {
-    const resolved = path.join(__dirname, "..", "..", "..", "api", "ebayClient.js");
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require(resolved) as unknown;
-    if (
-      typeof mod !== "object" ||
-      mod === null ||
-      typeof (mod as { request?: unknown }).request !== "function"
-    ) {
-      throw new Error("module must export request()");
-    }
-    return mod as EbayClientModule;
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    throw new Error(`Failed to load api/ebayClient.js: ${msg}`);
-  }
-}
-
-/** REST API host from `EBAY_ENV` (aligned with auth sandbox vs prod). */
-function getEbayRestApiBaseUrl(): string {
-  const e = String(process.env.EBAY_ENV ?? "").trim().toLowerCase();
-  if (e === "production" || e === "prod") {
-    return "https://api.ebay.com";
-  }
-  return "https://api.sandbox.ebay.com";
-}
-
-/**
- * Result of listing execution: one row per attempted item, no alternate shapes.
- */
-export type ExecutionResult = {
-  success: Array<{
-    item: NormalizedInventoryItem;
-    ebayPayload: EbayInventoryItem;
-    response: unknown;
-  }>;
-  failed: Array<{
-    item: NormalizedInventoryItem;
-    ebayPayload: EbayInventoryItem;
-    error: unknown;
-  }>;
-};
-
-/** @deprecated Use {@link ExecutionResult} */
-export type ExecuteBatchListingsResult = ExecutionResult;
+import { EbayExecutor } from "./execution/ebayExecutor";
+import { MockExecutor } from "./execution/mockExecutor";
+import type { ListingExecutionAdapter } from "./execution/executor";
+import type { ExecutionResult, ExecutionSuccess, ExecutionFailed, ExecutionError } from "./execution/types";
 
 export type ExecuteBatchListingsInput =
   | readonly NormalizedInventoryItem[]
@@ -99,61 +46,52 @@ function ebayPayloadForCorruptNormalizedItem(item: NormalizedInventoryItem): Eba
 }
 
 /**
- * Maps normalized items to eBay payloads and calls `ebayClient.request` once per item.
+ * Maps normalized items to eBay payloads and orchestrates per-item execution.
+ * Executor handles SINGLE ITEM ONLY - this function handles orchestration and aggregation.
  * Each iteration is isolated; one failure does not abort the batch.
  */
 export async function executeBatchListings(
-  itemsOrResult: ExecuteBatchListingsInput,
-  ebayClientOverride?: EbayClientModule
+  itemsOrResult: ExecuteBatchListingsInput
 ): Promise<ExecutionResult> {
-  const ebayClient = ebayClientOverride ?? loadEbayClient();
   const items = resolveNormalizedItems(itemsOrResult);
-  const success: ExecutionResult["success"] = [];
-  const failed: ExecutionResult["failed"] = [];
-  const baseUrl = getEbayRestApiBaseUrl();
+  const executor: ListingExecutionAdapter =
+    process.env.EXECUTION_MODE === "ebay"
+      ? new EbayExecutor()
+      : new MockExecutor();
+
+  const success: ExecutionSuccess[] = [];
+  const failed: ExecutionFailed[] = [];
+
+  console.log("[EXECUTION MODE]");
+  console.log(process.env.EXECUTION_MODE || "mock (default)");
 
   for (const item of items) {
     let ebayPayload: EbayInventoryItem;
     try {
       ebayPayload = toEbayInventoryItem(item);
     } catch (mapErr) {
+      // Mapping failures are handled as failed entries
       const fallbackPayload = ebayPayloadForCorruptNormalizedItem(item);
+      const error: ExecutionError = {
+        message: mapErr instanceof Error ? mapErr.message : String(mapErr),
+        raw: mapErr,
+      };
       failed.push({
         item,
         ebayPayload: fallbackPayload,
-        error: mapErr,
+        error,
       });
       continue;
     }
 
-    const url = `${baseUrl}/sell/inventory/v1/inventory_item/${encodeURIComponent(ebayPayload.sku)}`;
-    const bodySnapshot = toEbayInventoryRequestBody(ebayPayload);
-    const requestBody: Record<string, unknown> = {
-      condition: bodySnapshot.condition,
-      product: {
-        title: bodySnapshot.product.title,
-        description: bodySnapshot.product.description,
-        imageUrls: [...bodySnapshot.product.imageUrls],
-      },
-    };
+    // Execute single item
+    const result = await executor.execute({ item, ebayPayload });
 
-    try {
-      const response = await ebayClient.request({
-        method: "PUT",
-        url,
-        body: requestBody,
-      });
-      success.push({
-        item,
-        ebayPayload,
-        response,
-      });
-    } catch (err) {
-      failed.push({
-        item,
-        ebayPayload,
-        error: err,
-      });
+    // Aggregate results
+    if ('error' in result) {
+      failed.push(result as ExecutionFailed);
+    } else {
+      success.push(result as ExecutionSuccess);
     }
   }
 
