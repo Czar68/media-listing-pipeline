@@ -74,7 +74,12 @@ export { MediaAdapterImpl, simpleHash } from "./mediaAdapter";
 export { scanBatchRawItems } from "./scanner";
 export type { ScanBatchOptions } from "./scanner";
 export { runBatch } from "./runBatch";
-export type { RunBatchResult } from "./runBatch";
+export type { RunBatchResult, RunBatchWithTraceResult } from "./runBatch";
+export type {
+  ExecutionTrace,
+  ExecutionTraceEvent,
+  ExecutionTraceEventKind,
+} from "./executionTrace";
 export { enrichWithEpid } from "./epidEnricher";
 export type { EpidEnrichedInventoryItem } from "./epidEnricher";
 export * as ebayMapper from "./ebayMapper";

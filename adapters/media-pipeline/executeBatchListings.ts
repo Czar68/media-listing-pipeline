@@ -8,6 +8,9 @@ import { MockExecutor } from "./execution/mockExecutor";
 import type { ListingExecutionAdapter } from "./execution/executor";
 import type { ExecutionResult, ExecutionSuccess, ExecutionFailed, ExecutionError } from "./execution/types";
 
+export type { ExecutionResult, ExecutionSuccess, ExecutionFailed, ExecutionError } from "./execution/types";
+export type ExecuteBatchListingsResult = ExecutionResult;
+
 export type ExecuteBatchListingsInput =
   | readonly NormalizedInventoryItem[]
   | { readonly normalizedInventoryItems: readonly NormalizedInventoryItem[] };
@@ -62,9 +65,6 @@ export async function executeBatchListings(
   const success: ExecutionSuccess[] = [];
   const failed: ExecutionFailed[] = [];
 
-  console.log("[EXECUTION MODE]");
-  console.log(process.env.EXECUTION_MODE || "mock (default)");
-
   for (const item of items) {
     let ebayPayload: EbayInventoryItem;
     try {
@@ -73,6 +73,7 @@ export async function executeBatchListings(
       // Mapping failures are handled as failed entries
       const fallbackPayload = ebayPayloadForCorruptNormalizedItem(item);
       const error: ExecutionError = {
+        type: "UNKNOWN",
         message: mapErr instanceof Error ? mapErr.message : String(mapErr),
         raw: mapErr,
       };
