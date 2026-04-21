@@ -98,3 +98,19 @@ export type {
   ExecuteBatchListingsResult,
   ExecuteBatchListingsInput,
 } from "./executeBatchListings";
+export {
+  strategyAwareRun,
+  selectListingStrategy,
+  applyStrategyToItems,
+  STRATEGY_PLACEHOLDER_BASE_PRICE,
+  STRATEGY_SCORE_THRESHOLDS,
+  tierFromListingQualityScore,
+} from "./strategy";
+export type {
+  ListingStrategy,
+  ListingStrategyInput,
+  ListingMode,
+  RetryPolicy,
+  StrategySelectionContext,
+  StrategyAwareRunResult,
+} from "./strategy";

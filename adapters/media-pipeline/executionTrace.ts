@@ -5,7 +5,9 @@ export type ExecutionTraceEventKind =
   | "TRACE_NORMALIZE"
   | "TRACE_EXECUTE"
   | "TRACE_ERROR"
-  | "TRACE_RECOVERY";
+  | "TRACE_RECOVERY"
+  /** Pre-execution listing strategy chosen per SKU (strategy layer; does not change executor). */
+  | "TRACE_STRATEGY";
 
 export interface ExecutionTraceEvent {
   readonly kind: ExecutionTraceEventKind;
