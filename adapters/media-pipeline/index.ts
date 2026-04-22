@@ -171,3 +171,13 @@ export {
   getPolicyForLatestRuns,
   strategyRecommendationIndex,
 } from "./optimizer/strategyRecommendationIndex";
+export {
+  validateRunTransactionContractV1,
+} from "./contracts/runTransactionContractValidator";
+export type {
+  ContractWarning,
+  ContractWarningCode,
+  RunTransactionContractValidationResult,
+  RunTransactionContractValidationSummary,
+  ValidateRunTransactionContractV1Input,
+} from "./contracts/runTransactionContractValidator";

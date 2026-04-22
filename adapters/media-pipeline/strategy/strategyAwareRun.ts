@@ -13,6 +13,17 @@ import type { EpidEnrichedInventoryItem } from "../epidEnricher";
 import type { ListingStrategy, StrategySelectionContext } from "./listingStrategyTypes";
 import type { ListingQualityScore } from "../validation/validationScoringTypes";
 import { applyStrategyToItems, buildListingStrategyAndDecision } from "./listingStrategyEngine";
+import { persistListingRecords } from "../persistence/listingStore";
+import {
+  buildFinalListingRecord,
+  buildFallbackMarketSnapshotFromDecision,
+  profitPricingModelFromListingDecision,
+} from "../finalization/finalListingRecord";
+import { getMarketPricingSnapshot } from "../pricing/marketPricingEngine";
+import {
+  validateRunTransactionContractV1,
+  type RunTransactionContractValidationResult,
+} from "../contracts/runTransactionContractValidator";
 
 export interface StrategyAwareRunOptions {
   /**
@@ -35,6 +46,8 @@ export interface StrategyAwareRunResult extends RunBatchWithTraceResult {
   }[];
   /** Same orchestration trace as {@link runBatch}, with `TRACE_STRATEGY` events appended. */
   readonly trace: ExecutionTrace;
+  /** Read-only RUN_TRANSACTION_CONTRACT_V1 diagnostics; does not affect execution or persistence. */
+  readonly contractValidation: RunTransactionContractValidationResult;
 }
 
 function pickQualityScoreForSku(
@@ -86,6 +99,33 @@ export async function strategyAwareRun(
 
   const batchResult = await runBatch(preparedItems, scanOptions);
 
+  const timestamp = new Date().toISOString();
+  const finalRecords = await Promise.all(
+    paired.map(async ({ strategy, decision }) => {
+      const marketSnapshot =
+        decision.epid !== undefined && String(decision.epid).trim() !== ""
+          ? (await getMarketPricingSnapshot(String(decision.epid).trim())) ??
+            buildFallbackMarketSnapshotFromDecision(decision)
+          : buildFallbackMarketSnapshotFromDecision(decision);
+      const profitModel = profitPricingModelFromListingDecision(decision);
+      return buildFinalListingRecord({
+        listingDecision: decision,
+        listingStrategy: strategy,
+        marketSnapshot,
+        profitModel,
+        executionResult: batchResult.execution,
+        trace: batchResult.trace,
+        timestamp,
+      });
+    })
+  );
+  await persistListingRecords({ records: finalRecords });
+
+  const contractValidation = validateRunTransactionContractV1({
+    records: finalRecords,
+    execution: batchResult.execution,
+  });
+
   const strategiesBySku = strategies
     .map((strategy, i) => ({
       sku: String(normalized[i]?.sku ?? ""),
@@ -125,6 +165,7 @@ export async function strategyAwareRun(
     ...batchResult,
     trace: augmentedTrace,
     strategiesBySku,
+    contractValidation,
     ...(listingDecisionsBySku !== undefined ? { listingDecisionsBySku } : {}),
   };
 }
