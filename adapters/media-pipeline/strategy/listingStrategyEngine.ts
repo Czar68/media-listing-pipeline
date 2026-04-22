@@ -1,17 +1,14 @@
 import type { ListingStrategy, ListingStrategyInput } from "./listingStrategyTypes";
-import { createListingDecision, type PricingContext } from "../pricing/listingDecisionEngine";
+import type { ListingDecision, PricingContext } from "../pricing/listingDecisionEngine";
+import { LISTING_DECISION_BASE_REFERENCE, createListingDecision } from "../pricing/listingDecisionEngine";
 
-/** Matches mock executor / default listing placeholder used in this repo. */
-export const STRATEGY_PLACEHOLDER_BASE_PRICE = 9.99;
+/** @deprecated Use {@link LISTING_DECISION_BASE_REFERENCE} from listingDecisionEngine. */
+export const STRATEGY_PLACEHOLDER_BASE_PRICE = LISTING_DECISION_BASE_REFERENCE;
 
 export const STRATEGY_SCORE_THRESHOLDS = {
   aggressiveMin: 75,
   balancedMin: 55,
 } as const;
-
-function round4(n: number): number {
-  return Math.round(n * 10000) / 10000;
-}
 
 export function tierFromListingQualityScore(
   finalScore: number | undefined
@@ -28,55 +25,47 @@ export function tierFromListingQualityScore(
   return "safe";
 }
 
-function adjustmentFactorForMode(
-  mode: ListingStrategy["executionConfig"]["listingMode"],
-  hasEpid: boolean
-): number {
-  const baseByMode: Record<ListingStrategy["executionConfig"]["listingMode"], number> = {
-    aggressive: 1.06,
-    balanced: 1,
-    safe: 0.94,
-  };
-  let f: number = baseByMode[mode];
-  if (hasEpid) {
-    f = round4(Math.min(1.15, f + 0.02));
-  }
-  return f;
-}
-
 function strategyIdFor(mode: ListingStrategy["executionConfig"]["listingMode"]): string {
   return `listing-strategy-${mode}-v1`;
 }
 
-/**
- * Deterministic strategy selection from optional {@link ListingQualityScore} and EPID hints.
- * Uses ListingDecisionEngine for pricing decisions instead of hardcoded 9.99.
- */
-export function selectListingStrategy(input: ListingStrategyInput): ListingStrategy {
-  const mode = tierFromListingQualityScore(input.listingQualityScore?.finalScore);
-  const hasEpid =
-    input.enriched?.epid !== undefined && String(input.enriched.epid).trim() !== "";
-
-  const adjustmentFactor = adjustmentFactorForMode(mode, hasEpid);
-
-  // Use ListingDecisionEngine for pricing instead of hardcoded 9.99
-  const pricingContext: PricingContext = {
+function pricingContextFromInput(
+  mode: ListingStrategy["executionConfig"]["listingMode"],
+  enriched: ListingStrategyInput["enriched"]
+): PricingContext {
+  const epid =
+    enriched?.epid !== undefined && String(enriched.epid).trim() !== ""
+      ? String(enriched.epid).trim()
+      : undefined;
+  return {
     strategyId: strategyIdFor(mode),
     strategyType: mode,
+    ...(epid !== undefined ? { epid } : {}),
+    ...(enriched?.matchConfidence !== undefined
+      ? { matchConfidence: enriched.matchConfidence }
+      : {}),
   };
-  
-  const listingDecision = createListingDecision(input.item, pricingContext);
-  const basePrice = round4(listingDecision.recommendedPrice);
+}
+
+/**
+ * Single pass: {@link createListingDecision} + {@link ListingStrategy} (execution knobs).
+ */
+export async function buildListingStrategyAndDecision(
+  input: ListingStrategyInput
+): Promise<{ readonly strategy: ListingStrategy; readonly decision: ListingDecision }> {
+  const mode = tierFromListingQualityScore(input.listingQualityScore?.finalScore);
+  const ctx = pricingContextFromInput(mode, input.enriched);
+  const decision = await createListingDecision(input.item, ctx);
 
   const enableEPID = mode !== "safe";
   const retryPolicy: ListingStrategy["executionConfig"]["retryPolicy"] =
     mode === "safe" ? "strict" : "normal";
 
-  return {
-    strategyId: strategyIdFor(mode),
+  const strategy: ListingStrategy = {
+    strategyId: decision.strategyId,
     pricing: {
-      basePrice,
-      adjustmentFactor,
+      basePrice: decision.recommendedPrice,
+      adjustmentFactor: decision.metadata.adjustmentFactor,
     },
     executionConfig: {
       enableEPID,
@@ -84,6 +73,16 @@ export function selectListingStrategy(input: ListingStrategyInput): ListingStrat
       listingMode: mode,
     },
   };
+
+  return { strategy, decision };
+}
+
+/**
+ * Deterministic strategy selection; pricing comes from {@link createListingDecision} only.
+ */
+export async function selectListingStrategy(input: ListingStrategyInput): Promise<ListingStrategy> {
+  const result = await buildListingStrategyAndDecision(input);
+  return result.strategy;
 }
 
 /**

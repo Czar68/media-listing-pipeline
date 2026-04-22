@@ -1,6 +1,7 @@
 import type { RunBatchWithTraceResult } from "../runBatch";
 import { runBatch } from "../runBatch";
 import { MediaAdapterImpl } from "../mediaAdapter";
+import type { ListingDecision } from "../pricing/listingDecisionEngine";
 import { scanBatchRawItems, type ScanBatchOptions } from "../scanner";
 import type { NormalizedInventoryItem } from "../types";
 import {
@@ -11,8 +12,15 @@ import {
 import type { EpidEnrichedInventoryItem } from "../epidEnricher";
 import type { ListingStrategy, StrategySelectionContext } from "./listingStrategyTypes";
 import type { ListingQualityScore } from "../validation/validationScoringTypes";
-import { applyStrategyToItems, selectListingStrategy } from "./listingStrategyEngine";
-import { createListingDecision, type PricingContext, type ListingDecision } from "../pricing/listingDecisionEngine";
+import { applyStrategyToItems, buildListingStrategyAndDecision } from "./listingStrategyEngine";
+
+export interface StrategyAwareRunOptions {
+  /**
+   * When false, {@link StrategyAwareRunResult.listingDecisionsBySku} is omitted (strategies only).
+   * Default true.
+   */
+  readonly includeListingDecisions?: boolean;
+}
 
 export interface StrategyAwareRunResult extends RunBatchWithTraceResult {
   /** Deterministic, sorted by SKU: chosen strategy per inventory row (pre-execution). */
@@ -20,8 +28,8 @@ export interface StrategyAwareRunResult extends RunBatchWithTraceResult {
     readonly sku: string;
     readonly strategy: ListingStrategy;
   }[];
-  /** Deterministic, sorted by SKU: pricing decisions from ListingDecisionEngine. */
-  readonly listingDecisionsBySku: readonly {
+  /** Present when {@link StrategyAwareRunOptions.includeListingDecisions} is not false. */
+  readonly listingDecisionsBySku?: readonly {
     readonly sku: string;
     readonly decision: ListingDecision;
   }[];
@@ -53,20 +61,27 @@ function pickEnrichedForSku(
 export async function strategyAwareRun(
   items: readonly unknown[],
   scanOptions?: ScanBatchOptions,
-  context?: StrategySelectionContext
+  context?: StrategySelectionContext,
+  options?: StrategyAwareRunOptions
 ): Promise<StrategyAwareRunResult> {
   const adapter = new MediaAdapterImpl();
   const rawResults = scanBatchRawItems(items, scanOptions);
   const normalized: NormalizedInventoryItem[] = rawResults.map((r) => adapter.normalize(r));
 
-  const strategies: ListingStrategy[] = normalized.map((item) =>
-    selectListingStrategy({
-      item,
-      enriched: pickEnrichedForSku(item.sku, context),
-      listingQualityScore: pickQualityScoreForSku(item.sku, context),
+  const includeDecisions = options?.includeListingDecisions !== false;
+
+  const paired = await Promise.all(
+    normalized.map(async (item) => {
+      const { strategy, decision } = await buildListingStrategyAndDecision({
+        item,
+        enriched: pickEnrichedForSku(item.sku, context),
+        listingQualityScore: pickQualityScoreForSku(item.sku, context),
+      });
+      return { strategy, decision };
     })
   );
 
+  const strategies = paired.map((p) => p.strategy);
   const preparedItems = applyStrategyToItems(items, strategies);
 
   const batchResult = await runBatch(preparedItems, scanOptions);
@@ -79,21 +94,15 @@ export async function strategyAwareRun(
     .filter((row) => row.sku.length > 0)
     .sort((a, b) => a.sku.localeCompare(b.sku, "en"));
 
-  // Generate listing decisions using ListingDecisionEngine
-  const listingDecisionsBySku = normalized
-    .map((item) => {
-      const pricingContext: PricingContext = {
-        strategyId: strategiesBySku.find(s => s.sku === item.sku)?.strategy.strategyId || "unknown",
-        strategyType: strategiesBySku.find(s => s.sku === item.sku)?.strategy.executionConfig.listingMode || "balanced",
-      };
-      const decision = createListingDecision(item, pricingContext);
-      return {
-        sku: item.sku,
-        decision,
-      };
-    })
-    .filter((row) => row.sku.length > 0)
-    .sort((a, b) => a.sku.localeCompare(b.sku, "en"));
+  const listingDecisionsBySku = includeDecisions
+    ? paired
+        .map((p, i) => ({
+          sku: String(normalized[i]?.sku ?? ""),
+          decision: p.decision,
+        }))
+        .filter((row) => row.sku.length > 0)
+        .sort((a, b) => a.sku.localeCompare(b.sku, "en"))
+    : undefined;
 
   const strategyEvents: ExecutionTraceEvent[] = strategiesBySku.map(({ sku, strategy }) =>
     createTraceEvent("TRACE_STRATEGY", batchResult.trace.runId, {
@@ -116,6 +125,6 @@ export async function strategyAwareRun(
     ...batchResult,
     trace: augmentedTrace,
     strategiesBySku,
-    listingDecisionsBySku,
+    ...(listingDecisionsBySku !== undefined ? { listingDecisionsBySku } : {}),
   };
 }

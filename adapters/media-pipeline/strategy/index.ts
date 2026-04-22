@@ -8,8 +8,13 @@ export type {
 export {
   selectListingStrategy,
   applyStrategyToItems,
+  buildListingStrategyAndDecision,
   STRATEGY_PLACEHOLDER_BASE_PRICE,
   STRATEGY_SCORE_THRESHOLDS,
   tierFromListingQualityScore,
 } from "./listingStrategyEngine";
-export { strategyAwareRun, type StrategyAwareRunResult } from "./strategyAwareRun";
+export {
+  strategyAwareRun,
+  type StrategyAwareRunResult,
+  type StrategyAwareRunOptions,
+} from "./strategyAwareRun";

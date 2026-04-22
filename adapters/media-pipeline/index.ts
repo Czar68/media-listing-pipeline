@@ -102,6 +102,7 @@ export {
   strategyAwareRun,
   selectListingStrategy,
   applyStrategyToItems,
+  buildListingStrategyAndDecision,
   STRATEGY_PLACEHOLDER_BASE_PRICE,
   STRATEGY_SCORE_THRESHOLDS,
   tierFromListingQualityScore,
@@ -113,4 +114,10 @@ export type {
   RetryPolicy,
   StrategySelectionContext,
   StrategyAwareRunResult,
+  StrategyAwareRunOptions,
 } from "./strategy";
+export type { ListingDecision, PricingContext } from "./pricing/listingDecisionEngine";
+export {
+  LISTING_DECISION_BASE_REFERENCE,
+  createListingDecision,
+} from "./pricing/listingDecisionEngine";
