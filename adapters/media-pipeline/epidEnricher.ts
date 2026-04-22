@@ -72,6 +72,11 @@ export interface EpidEnrichedInventoryItem extends NormalizedInventoryItem {
 export async function enrichWithEpid(
   item: NormalizedInventoryItem
 ): Promise<EpidEnrichedInventoryItem> {
+  const existing = item as NormalizedInventoryItem & Partial<EpidEnrichedInventoryItem>;
+  if (existing.epid !== undefined && String(existing.epid).trim() !== "") {
+    return existing;
+  }
+
   try {
     const token = String(process.env.EBAY_APP_TOKEN ?? "").trim();
     if (!token) {

@@ -1,5 +1,5 @@
 import type { NormalizedInventoryItem } from "../types";
-import { getMarketPricingSnapshot } from "./marketPricingEngine";
+import type { MarketPricingSnapshot } from "./marketPricingEngine";
 import { buildProfitPricingModel } from "./profitPricingModel";
 
 /**
@@ -32,6 +32,8 @@ export interface PricingContext {
    * EPID-based anchor pricing is used. Omitted or empty → fallback model.
    */
   readonly epid?: string;
+  readonly canonicalEpid?: string;
+  readonly canonicalSnapshot?: MarketPricingSnapshot | null;
   readonly matchConfidence?: number;
   /**
    * Optional cost basis for profit calculations.
@@ -96,14 +98,18 @@ function clampConfidence(c: number): number {
 
 /**
  * Builds {@link ListingDecision} from normalized inventory + strategy context.
- * EPID path uses market pricing snapshot as anchor when {@link PricingContext.epid} is set.
+ * EPID path uses canonical market pricing snapshot as anchor when provided.
  */
 export async function createListingDecision(
   item: NormalizedInventoryItem,
   context: PricingContext
 ): Promise<ListingDecision> {
   const tier = STRATEGY_TIERS[context.strategyType] ?? STRATEGY_TIERS.balanced;
-  const epid = context.epid !== undefined ? String(context.epid).trim() : "";
+  const epidRaw =
+    context.canonicalEpid !== undefined && String(context.canonicalEpid).trim() !== ""
+      ? context.canonicalEpid
+      : context.epid;
+  const epid = epidRaw !== undefined ? String(epidRaw).trim() : "";
   const hasEpid = epid.length > 0;
 
   const matchConf =
@@ -122,7 +128,7 @@ export async function createListingDecision(
 
   if (hasEpid) {
     source = "epid_market";
-    const marketSnapshot = await getMarketPricingSnapshot(epid);
+    const marketSnapshot = context.canonicalSnapshot ?? null;
     
     if (marketSnapshot) {
       // Use market median as base anchor

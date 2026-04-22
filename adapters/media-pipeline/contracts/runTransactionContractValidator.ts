@@ -39,6 +39,15 @@ export interface ValidateRunTransactionContractV1Input {
    */
   readonly listingDecisions?: readonly ListingDecision[];
   readonly execution: ExecutionResult | readonly ExecutionResult[];
+  readonly canonicalBindingBySku?: Readonly<
+    Record<
+      string,
+      {
+        readonly canonicalEpid: string;
+        readonly canonicalSnapshot: FinalListingRecord["marketSnapshot"] | null;
+      }
+    >
+  >;
 }
 
 function nearlyEqualMoney(a: number, b: number): boolean {
@@ -48,15 +57,6 @@ function nearlyEqualMoney(a: number, b: number): boolean {
 function normEpid(raw: string | undefined): string {
   if (raw === undefined) return "";
   return String(raw).trim();
-}
-
-function epidSetForSources(values: readonly string[]): Set<string> {
-  const s = new Set<string>();
-  for (const v of values) {
-    const n = normEpid(v);
-    if (n.length > 0) s.add(n);
-  }
-  return s;
 }
 
 function itemEpid(item: ExecutionSuccess["item"] | ExecutionFailed["item"]): string {
@@ -215,6 +215,8 @@ export function validateRunTransactionContractV1(
   for (const r of records) {
     const sku = String(r.sku);
     const decision = r.listingDecision;
+    const canonicalBinding = input.canonicalBindingBySku?.[sku];
+    const canonicalEpid = normEpid(canonicalBinding?.canonicalEpid ?? r.epid);
 
     if (externalIndexed !== null) {
       const ext = externalIndexed.map.get(sku);
@@ -241,18 +243,24 @@ export function validateRunTransactionContractV1(
         return [];
       }),
     ];
-    const distinctEpids = epidSetForSources(epidSources);
-    if (distinctEpids.size > 1 && !warnedEpid.has(sku)) {
+    const nonCanonicalDrift = epidSources.some((ep) => ep.length > 0 && ep !== canonicalEpid);
+    if (nonCanonicalDrift && !warnedEpid.has(sku)) {
       warnings.push({ code: "EPID_DRIFT_WARNING", sku });
       warnedEpid.add(sku);
       epidDriftCount += 1;
     }
 
-    const snapSet = snapshotKeysBySku.get(sku);
-    if (snapSet !== undefined && snapSet.size > 1 && !warnedSnapshot.has(sku)) {
-      warnings.push({ code: "MARKET_SNAPSHOT_DRIFT_WARNING", sku });
-      warnedSnapshot.add(sku);
-      snapshotDriftCount += 1;
+    const canonicalSnapshot = canonicalBinding?.canonicalSnapshot ?? null;
+    if (canonicalSnapshot !== null) {
+      const canonicalKey = snapshotKey(canonicalSnapshot);
+      const snapSet = snapshotKeysBySku.get(sku);
+      const hasSnapshotDrift =
+        snapSet !== undefined && [...snapSet].some((k) => k !== canonicalKey);
+      if (hasSnapshotDrift && !warnedSnapshot.has(sku)) {
+        warnings.push({ code: "MARKET_SNAPSHOT_DRIFT_WARNING", sku });
+        warnedSnapshot.add(sku);
+        snapshotDriftCount += 1;
+      }
     }
 
     const pm = r.profitModel;

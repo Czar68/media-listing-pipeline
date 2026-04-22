@@ -103,7 +103,13 @@ export async function runBatch(
   );
 
   const enrichedInventoryItems: EpidEnrichedInventoryItem[] = await Promise.all(
-    normalizedInventoryItems.map((row) => enrichWithEpid(row))
+    normalizedInventoryItems.map(async (row) => {
+      const existing = row as NormalizedInventoryItem & Partial<EpidEnrichedInventoryItem>;
+      if (existing.epid !== undefined && String(existing.epid).trim() !== "") {
+        return existing;
+      }
+      return enrichWithEpid(row);
+    })
   );
 
   events.push(

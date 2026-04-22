@@ -9,17 +9,20 @@ import {
   type ExecutionTrace,
   type ExecutionTraceEvent,
 } from "../executionTrace";
-import type { EpidEnrichedInventoryItem } from "../epidEnricher";
 import type { ListingStrategy, StrategySelectionContext } from "./listingStrategyTypes";
 import type { ListingQualityScore } from "../validation/validationScoringTypes";
 import { applyStrategyToItems, buildListingStrategyAndDecision } from "./listingStrategyEngine";
 import { persistListingRecords } from "../persistence/listingStore";
 import {
+  enrichWithEpid,
+  type EpidEnrichedInventoryItem,
+} from "../epidEnricher";
+import {
   buildFinalListingRecord,
   buildFallbackMarketSnapshotFromDecision,
   profitPricingModelFromListingDecision,
 } from "../finalization/finalListingRecord";
-import { getMarketPricingSnapshot } from "../pricing/marketPricingEngine";
+import { getMarketPricingSnapshot, type MarketPricingSnapshot } from "../pricing/marketPricingEngine";
 import {
   validateRunTransactionContractV1,
   type RunTransactionContractValidationResult,
@@ -50,6 +53,16 @@ export interface StrategyAwareRunResult extends RunBatchWithTraceResult {
   readonly contractValidation: RunTransactionContractValidationResult;
 }
 
+interface CanonicalRunBinding {
+  readonly sku: string;
+  readonly canonicalEpid: string;
+  readonly canonicalSnapshot: MarketPricingSnapshot | null;
+  readonly snapshotStatus: "OK" | "MISSING";
+  readonly epidConflict: boolean;
+  readonly bindingSource: "context" | "enrichment" | "none";
+  readonly matchConfidence?: number;
+}
+
 function pickQualityScoreForSku(
   sku: string,
   context: StrategySelectionContext | undefined
@@ -67,6 +80,70 @@ function pickEnrichedForSku(
   return context?.enrichedBySku?.[sku];
 }
 
+async function resolveCanonicalBinding(
+  normalized: readonly NormalizedInventoryItem[],
+  context: StrategySelectionContext | undefined
+): Promise<ReadonlyMap<string, CanonicalRunBinding>> {
+  const out = new Map<string, CanonicalRunBinding>();
+
+  for (const item of normalized) {
+    const sku = String(item.sku);
+    const contextEnriched = pickEnrichedForSku(sku, context);
+    const contextEpid =
+      contextEnriched?.epid !== undefined && String(contextEnriched.epid).trim() !== ""
+        ? String(contextEnriched.epid).trim()
+        : "";
+
+    let enrichedResult: EpidEnrichedInventoryItem | null = null;
+    try {
+      enrichedResult = await enrichWithEpid(item);
+    } catch {
+      enrichedResult = null;
+    }
+
+    const enrichedEpid =
+      enrichedResult?.epid !== undefined && String(enrichedResult.epid).trim() !== ""
+        ? String(enrichedResult.epid).trim()
+        : "";
+
+    const canonicalEpid = contextEpid !== "" ? contextEpid : enrichedEpid;
+    const bindingSource: CanonicalRunBinding["bindingSource"] =
+      contextEpid !== "" ? "context" : enrichedEpid !== "" ? "enrichment" : "none";
+    const epidConflict =
+      contextEpid !== "" &&
+      enrichedEpid !== "" &&
+      contextEpid !== enrichedEpid;
+
+    let canonicalSnapshot: MarketPricingSnapshot | null = null;
+    let snapshotStatus: CanonicalRunBinding["snapshotStatus"] = "MISSING";
+
+    if (canonicalEpid !== "") {
+      try {
+        canonicalSnapshot = await getMarketPricingSnapshot(canonicalEpid);
+      } catch {
+        canonicalSnapshot = null;
+      }
+      snapshotStatus = canonicalSnapshot !== null ? "OK" : "MISSING";
+    }
+
+    out.set(sku, {
+      sku,
+      canonicalEpid,
+      canonicalSnapshot,
+      snapshotStatus,
+      epidConflict,
+      bindingSource,
+      ...(contextEnriched?.matchConfidence !== undefined
+        ? { matchConfidence: contextEnriched.matchConfidence }
+        : enrichedResult?.matchConfidence !== undefined
+          ? { matchConfidence: enrichedResult.matchConfidence }
+          : {}),
+    });
+  }
+
+  return out;
+}
+
 /**
  * Pre-executes strategy selection (same normalize path as `runBatch`), injects strategy metadata
  * into raw items, then calls {@link runBatch}. Appends `TRACE_STRATEGY` events to the returned trace.
@@ -80,15 +157,28 @@ export async function strategyAwareRun(
   const adapter = new MediaAdapterImpl();
   const rawResults = scanBatchRawItems(items, scanOptions);
   const normalized: NormalizedInventoryItem[] = rawResults.map((r) => adapter.normalize(r));
+  const canonicalBindingBySku = await resolveCanonicalBinding(normalized, context);
 
   const includeDecisions = options?.includeListingDecisions !== false;
 
   const paired = await Promise.all(
     normalized.map(async (item) => {
+      const binding = canonicalBindingBySku.get(String(item.sku));
       const { strategy, decision } = await buildListingStrategyAndDecision({
         item,
-        enriched: pickEnrichedForSku(item.sku, context),
+        enriched: {
+          ...pickEnrichedForSku(item.sku, context),
+          ...(binding?.canonicalEpid !== undefined && binding.canonicalEpid !== ""
+            ? { epid: binding.canonicalEpid }
+            : {}),
+          ...(binding?.matchConfidence !== undefined
+            ? { matchConfidence: binding.matchConfidence }
+            : {}),
+        },
         listingQualityScore: pickQualityScoreForSku(item.sku, context),
+      }, {
+        canonicalEpid: binding?.canonicalEpid,
+        canonicalSnapshot: binding?.canonicalSnapshot,
       });
       return { strategy, decision };
     })
@@ -102,15 +192,13 @@ export async function strategyAwareRun(
   const timestamp = new Date().toISOString();
   const finalRecords = await Promise.all(
     paired.map(async ({ strategy, decision }) => {
-      const marketSnapshot =
-        decision.epid !== undefined && String(decision.epid).trim() !== ""
-          ? (await getMarketPricingSnapshot(String(decision.epid).trim())) ??
-            buildFallbackMarketSnapshotFromDecision(decision)
-          : buildFallbackMarketSnapshotFromDecision(decision);
+      const binding = canonicalBindingBySku.get(String(decision.sku));
+      const marketSnapshot = binding?.canonicalSnapshot ?? buildFallbackMarketSnapshotFromDecision(decision);
       const profitModel = profitPricingModelFromListingDecision(decision);
       return buildFinalListingRecord({
         listingDecision: decision,
         listingStrategy: strategy,
+        canonicalEpid: binding?.canonicalEpid ?? "",
         marketSnapshot,
         profitModel,
         executionResult: batchResult.execution,
@@ -124,6 +212,15 @@ export async function strategyAwareRun(
   const contractValidation = validateRunTransactionContractV1({
     records: finalRecords,
     execution: batchResult.execution,
+    canonicalBindingBySku: Object.fromEntries(
+      [...canonicalBindingBySku.entries()].map(([sku, binding]) => [
+        sku,
+        {
+          canonicalEpid: binding.canonicalEpid,
+          canonicalSnapshot: binding.canonicalSnapshot,
+        },
+      ])
+    ),
   });
 
   const strategiesBySku = strategies

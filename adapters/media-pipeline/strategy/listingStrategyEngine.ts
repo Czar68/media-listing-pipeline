@@ -1,5 +1,6 @@
 import type { ListingStrategy, ListingStrategyInput } from "./listingStrategyTypes";
 import type { ListingDecision, PricingContext } from "../pricing/listingDecisionEngine";
+import type { MarketPricingSnapshot } from "../pricing/marketPricingEngine";
 import { LISTING_DECISION_BASE_REFERENCE, createListingDecision } from "../pricing/listingDecisionEngine";
 
 /** @deprecated Use {@link LISTING_DECISION_BASE_REFERENCE} from listingDecisionEngine. */
@@ -31,16 +32,30 @@ function strategyIdFor(mode: ListingStrategy["executionConfig"]["listingMode"]):
 
 function pricingContextFromInput(
   mode: ListingStrategy["executionConfig"]["listingMode"],
-  enriched: ListingStrategyInput["enriched"]
+  enriched: ListingStrategyInput["enriched"],
+  canonical?: {
+    readonly canonicalEpid?: string;
+    readonly canonicalSnapshot?: MarketPricingSnapshot | null;
+  }
 ): PricingContext {
+  const canonicalEpid =
+    canonical?.canonicalEpid !== undefined && String(canonical.canonicalEpid).trim() !== ""
+      ? String(canonical.canonicalEpid).trim()
+      : undefined;
   const epid =
-    enriched?.epid !== undefined && String(enriched.epid).trim() !== ""
+    canonicalEpid !== undefined
+      ? canonicalEpid
+      : enriched?.epid !== undefined && String(enriched.epid).trim() !== ""
       ? String(enriched.epid).trim()
       : undefined;
   return {
     strategyId: strategyIdFor(mode),
     strategyType: mode,
     ...(epid !== undefined ? { epid } : {}),
+    ...(canonicalEpid !== undefined ? { canonicalEpid } : {}),
+    ...(canonical?.canonicalSnapshot !== undefined
+      ? { canonicalSnapshot: canonical.canonicalSnapshot }
+      : {}),
     ...(enriched?.matchConfidence !== undefined
       ? { matchConfidence: enriched.matchConfidence }
       : {}),
@@ -51,10 +66,14 @@ function pricingContextFromInput(
  * Single pass: {@link createListingDecision} + {@link ListingStrategy} (execution knobs).
  */
 export async function buildListingStrategyAndDecision(
-  input: ListingStrategyInput
+  input: ListingStrategyInput,
+  canonical?: {
+    readonly canonicalEpid?: string;
+    readonly canonicalSnapshot?: MarketPricingSnapshot | null;
+  }
 ): Promise<{ readonly strategy: ListingStrategy; readonly decision: ListingDecision }> {
   const mode = tierFromListingQualityScore(input.listingQualityScore?.finalScore);
-  const ctx = pricingContextFromInput(mode, input.enriched);
+  const ctx = pricingContextFromInput(mode, input.enriched, canonical);
   const decision = await createListingDecision(input.item, ctx);
 
   const enableEPID = mode !== "safe";

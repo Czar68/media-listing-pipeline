@@ -26,6 +26,8 @@ type BrowseSearchResponse = {
   itemSummaries?: BrowseItemSummary[];
 };
 
+const MARKET_SNAPSHOT_CACHE = new Map<string, MarketPricingSnapshot>();
+
 function getEbayApiBaseUrl(): string {
   const e = String(process.env.EBAY_ENV ?? "").trim().toLowerCase();
   if (e === "production" || e === "prod") {
@@ -134,11 +136,18 @@ export async function getMarketPricingSnapshot(
     return null;
   }
 
+  const cached = MARKET_SNAPSHOT_CACHE.get(trimmedEpid);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   try {
     const token = String(process.env.EBAY_APP_TOKEN ?? "").trim();
     if (!token) {
       // No token configured, use deterministic fallback
-      return getDeterministicSnapshot(trimmedEpid);
+      const snap = getDeterministicSnapshot(trimmedEpid);
+      MARKET_SNAPSHOT_CACHE.set(trimmedEpid, snap);
+      return snap;
     }
 
     const base = getEbayApiBaseUrl();
@@ -154,7 +163,9 @@ export async function getMarketPricingSnapshot(
 
     if (!res.ok) {
       // API error, use deterministic fallback
-      return getDeterministicSnapshot(trimmedEpid);
+      const snap = getDeterministicSnapshot(trimmedEpid);
+      MARKET_SNAPSHOT_CACHE.set(trimmedEpid, snap);
+      return snap;
     }
 
     const data = (await res.json()) as BrowseSearchResponse;
@@ -162,14 +173,18 @@ export async function getMarketPricingSnapshot(
 
     if (summaries.length === 0) {
       // No results, use deterministic fallback
-      return getDeterministicSnapshot(trimmedEpid);
+      const snap = getDeterministicSnapshot(trimmedEpid);
+      MARKET_SNAPSHOT_CACHE.set(trimmedEpid, snap);
+      return snap;
     }
 
     const prices = extractPrices(summaries);
     
     if (prices.length === 0) {
       // No valid prices found, use deterministic fallback
-      return getDeterministicSnapshot(trimmedEpid);
+      const snap = getDeterministicSnapshot(trimmedEpid);
+      MARKET_SNAPSHOT_CACHE.set(trimmedEpid, snap);
+      return snap;
     }
 
     // Sort for median calculation
@@ -181,7 +196,7 @@ export async function getMarketPricingSnapshot(
     const sampleSize = prices.length;
     const confidence = Math.round(Math.min(1, sampleSize / 20) * 10000) / 10000;
 
-    return {
+    const snap = {
       epid: trimmedEpid,
       medianPrice,
       lowPrice,
@@ -189,8 +204,12 @@ export async function getMarketPricingSnapshot(
       sampleSize,
       confidence,
     };
+    MARKET_SNAPSHOT_CACHE.set(trimmedEpid, snap);
+    return snap;
   } catch {
     // Any error (network, parsing, etc.), use deterministic fallback
-    return getDeterministicSnapshot(trimmedEpid);
+    const snap = getDeterministicSnapshot(trimmedEpid);
+    MARKET_SNAPSHOT_CACHE.set(trimmedEpid, snap);
+    return snap;
   }
 }

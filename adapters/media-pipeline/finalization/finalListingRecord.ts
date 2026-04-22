@@ -67,6 +67,8 @@ export interface BuildFinalListingRecordParams {
   readonly listingDecision: ListingDecision;
   /** Execution-time strategy (same run as the decision); retained for audit and future fields. */
   readonly listingStrategy: ListingStrategy;
+  /** Canonical EPID for the run-bound SKU (single-source for persistence). */
+  readonly canonicalEpid?: string;
   readonly marketSnapshot: MarketPricingSnapshot;
   readonly profitModel: ProfitPricingModel;
   readonly executionResult: ExecutionResult;
@@ -149,7 +151,7 @@ export function buildFinalListingRecord(
 
   return {
     sku: listingDecision.sku,
-    epid: listingDecision.epid ?? "",
+    epid: params.canonicalEpid !== undefined ? String(params.canonicalEpid).trim() : listingDecision.epid ?? "",
     strategyId: listingDecision.strategyId,
     listingDecision,
     marketSnapshot: {
