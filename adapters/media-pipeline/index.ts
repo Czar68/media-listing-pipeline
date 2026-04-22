@@ -121,3 +121,53 @@ export {
   LISTING_DECISION_BASE_REFERENCE,
   createListingDecision,
 } from "./pricing/listingDecisionEngine";
+export type {
+  FinalListingRecord,
+  BuildFinalListingRecordParams,
+} from "./finalization/finalListingRecord";
+export {
+  buildFinalListingRecord,
+  buildFallbackMarketSnapshotFromDecision,
+  profitPricingModelFromListingDecision,
+} from "./finalization/finalListingRecord";
+export type { PersistListingRecordsInput } from "./persistence/listingStore";
+export {
+  persistListingRecords,
+  loadPersistedListingRecords,
+} from "./persistence/listingStore";
+export type {
+  RunHistoryEntry,
+  BuildRunHistoryOptions,
+} from "./persistence/runHistoryStore";
+export { buildRunHistoryEntries } from "./persistence/runHistoryStore";
+export type {
+  RunPerformanceModel,
+  RunComparison,
+  MetricWinner,
+} from "./intelligence/runPerformanceModel";
+export {
+  computeRunPerformance,
+  compareRuns,
+  groupRecordsByRunId,
+} from "./intelligence/runPerformanceModel";
+export {
+  getRunPerformance,
+  listRunPerformances,
+  compareLatestRuns,
+  runPerformanceIndex,
+} from "./intelligence/runPerformanceIndex";
+export type {
+  StrategyAdjustmentPolicy,
+  ComputeStrategyAdjustmentPolicyInput,
+  RunTrendSnapshot,
+  PolicyComparison,
+} from "./optimizer/strategyFeedbackOptimizer";
+export {
+  computeStrategyAdjustmentPolicy,
+  compareRunTrend,
+  comparePolicyAcrossRuns,
+} from "./optimizer/strategyFeedbackOptimizer";
+export {
+  getPolicyForLatestRuns,
+  strategyRecommendationIndex,
+} from "./optimizer/strategyRecommendationIndex";
