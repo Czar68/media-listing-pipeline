@@ -53,9 +53,14 @@ export interface StrategyAwareRunResult extends RunBatchWithTraceResult {
   readonly contractValidation: RunTransactionContractValidationResult;
 }
 
+type CanonicalBindingStatus =
+  | "RESOLVED"
+  | "UNRESOLVED_BLOCKED";
+
 interface CanonicalRunBinding {
   readonly sku: string;
   readonly canonicalEpid: string;
+  readonly status: CanonicalBindingStatus;
   readonly canonicalSnapshot: MarketPricingSnapshot | null;
   readonly snapshotStatus: "OK" | "MISSING";
   readonly epidConflict: boolean;
@@ -110,17 +115,20 @@ async function resolveCanonicalBinding(
         ? String(enrichedResult.epid).trim()
         : "";
 
-    const canonicalEpid = normalizedEpid !== "" ? normalizedEpid : "EPID_UNRESOLVED";
+    const status: CanonicalBindingStatus =
+      normalizedEpid !== "" ? "RESOLVED" : "UNRESOLVED_BLOCKED";
+    const canonicalEpid =
+      status === "RESOLVED" ? normalizedEpid : "";
     const bindingSource: CanonicalRunBinding["bindingSource"] =
       normalizedEpid !== "" ? "context" : "none";
     const epidConflict =
-      canonicalEpid === "EPID_UNRESOLVED" ||
+      status === "UNRESOLVED_BLOCKED" ||
       (enrichedEpid !== "" && enrichedEpid !== canonicalEpid);
 
     let canonicalSnapshot: MarketPricingSnapshot | null = null;
     let snapshotStatus: CanonicalRunBinding["snapshotStatus"] = "MISSING";
 
-    if (canonicalEpid !== "EPID_UNRESOLVED") {
+    if (status === "RESOLVED") {
       try {
         canonicalSnapshot = await getMarketPricingSnapshot(canonicalEpid);
       } catch {
@@ -132,6 +140,7 @@ async function resolveCanonicalBinding(
     out.set(sku, {
       sku,
       canonicalEpid,
+      status,
       canonicalSnapshot,
       snapshotStatus,
       epidConflict,
@@ -190,7 +199,7 @@ export async function strategyAwareRun(
   const strategies = paired.map((p) => p.strategy);
   const preparedItems = applyStrategyToItems(items, strategies);
 
-  const batchResult = await runBatch(preparedItems, scanOptions);
+  const batchResult = await runBatch(preparedItems, canonicalBindingBySku, scanOptions);
 
   const timestamp = new Date().toISOString();
   const finalRecords = await Promise.all(
@@ -219,7 +228,8 @@ export async function strategyAwareRun(
       [...canonicalBindingBySku.entries()].map(([sku, binding]) => [
         sku,
         {
-          canonicalEpid: binding.canonicalEpid,
+          canonicalEpid:
+            binding.status === "RESOLVED" ? binding.canonicalEpid : "EPID_UNRESOLVED",
           canonicalSnapshot: binding.canonicalSnapshot,
         },
       ])

@@ -26,6 +26,17 @@ export type RunBatchResult = {
 /** {@link RunBatchResult} plus aggregated {@link ExecutionTrace} for orchestration observability. */
 export type RunBatchWithTraceResult = RunBatchResult & { readonly trace: ExecutionTrace };
 
+export interface CanonicalRunBinding {
+  readonly canonicalEpid: string;
+  readonly status: "RESOLVED" | "UNRESOLVED_BLOCKED";
+}
+
+function isCanonicalBindingMap(
+  value: unknown
+): value is ReadonlyMap<string, CanonicalRunBinding> {
+  return value instanceof Map;
+}
+
 function executionModeLabel(): "ebay" | "mock" {
   return process.env.EXECUTION_MODE === "ebay" ? "ebay" : "mock";
 }
@@ -72,12 +83,29 @@ function appendErrorAndRecoveryEvents(
 }
 
 /**
- * Strict order: scan → normalize → {@link enrichWithEpid} (parallel, order-preserving) → {@link executeBatchListings}.
+ * Strict order: scan → normalize → canonical EPID projection → {@link executeBatchListings}.
  */
 export async function runBatch(
   items: readonly unknown[],
+  canonicalBindingBySku: ReadonlyMap<string, CanonicalRunBinding>,
   scanOptions?: ScanBatchOptions
+): Promise<RunBatchWithTraceResult>;
+export async function runBatch(
+  items: readonly unknown[],
+  scanOptions?: ScanBatchOptions
+): Promise<RunBatchWithTraceResult>;
+export async function runBatch(
+  items: readonly unknown[],
+  canonicalBindingOrScanOptions?: ReadonlyMap<string, CanonicalRunBinding> | ScanBatchOptions,
+  maybeScanOptions?: ScanBatchOptions
 ): Promise<RunBatchWithTraceResult> {
+  const canonicalBindingBySku = isCanonicalBindingMap(canonicalBindingOrScanOptions)
+    ? canonicalBindingOrScanOptions
+    : null;
+  const scanOptions = isCanonicalBindingMap(canonicalBindingOrScanOptions)
+    ? maybeScanOptions
+    : canonicalBindingOrScanOptions;
+
   const runId = randomUUID();
   const runStartedAt = new Date().toISOString();
   const events: ExecutionTraceEvent[] = [];
@@ -101,16 +129,25 @@ export async function runBatch(
     })
   );
 
-  const enrichedInventoryItems: EpidEnrichedInventoryItem[] = normalizedInventoryItems.map((row) => {
-    const existing = row as NormalizedInventoryItem & Partial<EpidEnrichedInventoryItem>;
-    const epid =
-      existing.epid !== undefined && String(existing.epid).trim() !== ""
-        ? String(existing.epid).trim()
-        : "EPID_UNRESOLVED";
-    return {
-      ...existing,
-      epid,
-    };
+  const enrichedInventoryItems: EpidEnrichedInventoryItem[] = normalizedInventoryItems.flatMap((row) => {
+    if (canonicalBindingBySku === null) {
+      return [];
+    }
+    const binding = canonicalBindingBySku.get(String(row.sku));
+    if (
+      binding === undefined ||
+      binding.status !== "RESOLVED" ||
+      String(binding.canonicalEpid).trim() === ""
+    ) {
+      return [];
+    }
+    const existing = row as NormalizedInventoryItem & Omit<Partial<EpidEnrichedInventoryItem>, "epid">;
+    return [
+      {
+        ...existing,
+        epid: String(binding.canonicalEpid).trim(),
+      },
+    ];
   });
 
   events.push(
