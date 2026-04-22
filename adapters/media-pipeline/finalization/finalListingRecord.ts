@@ -35,6 +35,9 @@ export interface FinalListingRecord {
   readonly sku: string;
   /** Empty string when no catalog match. */
   readonly epid: string;
+  readonly metadata?: {
+    readonly epidResolved: boolean;
+  };
   readonly strategyId: string;
   readonly listingDecision: ListingDecision;
   readonly marketSnapshot: {
@@ -151,7 +154,16 @@ export function buildFinalListingRecord(
 
   return {
     sku: listingDecision.sku,
-    epid: params.canonicalEpid !== undefined ? String(params.canonicalEpid).trim() : listingDecision.epid ?? "",
+    epid:
+      params.canonicalEpid !== undefined && String(params.canonicalEpid).trim() !== ""
+        ? String(params.canonicalEpid).trim()
+        : "EPID_UNRESOLVED",
+    metadata: {
+      epidResolved:
+        params.canonicalEpid !== undefined &&
+        String(params.canonicalEpid).trim() !== "" &&
+        String(params.canonicalEpid).trim() !== "EPID_UNRESOLVED",
+    },
     strategyId: listingDecision.strategyId,
     listingDecision,
     marketSnapshot: {

@@ -89,35 +89,38 @@ async function resolveCanonicalBinding(
   for (const item of normalized) {
     const sku = String(item.sku);
     const contextEnriched = pickEnrichedForSku(sku, context);
-    const contextEpid =
-      contextEnriched?.epid !== undefined && String(contextEnriched.epid).trim() !== ""
-        ? String(contextEnriched.epid).trim()
+    const normalizedWithOptionalEpid = item as NormalizedInventoryItem & Partial<EpidEnrichedInventoryItem>;
+    const normalizedEpid =
+      normalizedWithOptionalEpid.epid !== undefined &&
+      String(normalizedWithOptionalEpid.epid).trim() !== "" &&
+      String(normalizedWithOptionalEpid.epid).trim() !== "EPID_UNRESOLVED"
+        ? String(normalizedWithOptionalEpid.epid).trim()
         : "";
 
     let enrichedResult: EpidEnrichedInventoryItem | null = null;
     try {
-      enrichedResult = await enrichWithEpid(item);
+      enrichedResult = await enrichWithEpid(item, { mode: "ingestion" });
     } catch {
       enrichedResult = null;
     }
 
     const enrichedEpid =
       enrichedResult?.epid !== undefined && String(enrichedResult.epid).trim() !== ""
+      && String(enrichedResult.epid).trim() !== "EPID_UNRESOLVED"
         ? String(enrichedResult.epid).trim()
         : "";
 
-    const canonicalEpid = contextEpid !== "" ? contextEpid : enrichedEpid;
+    const canonicalEpid = normalizedEpid !== "" ? normalizedEpid : "EPID_UNRESOLVED";
     const bindingSource: CanonicalRunBinding["bindingSource"] =
-      contextEpid !== "" ? "context" : enrichedEpid !== "" ? "enrichment" : "none";
+      normalizedEpid !== "" ? "context" : "none";
     const epidConflict =
-      contextEpid !== "" &&
-      enrichedEpid !== "" &&
-      contextEpid !== enrichedEpid;
+      canonicalEpid === "EPID_UNRESOLVED" ||
+      (enrichedEpid !== "" && enrichedEpid !== canonicalEpid);
 
     let canonicalSnapshot: MarketPricingSnapshot | null = null;
     let snapshotStatus: CanonicalRunBinding["snapshotStatus"] = "MISSING";
 
-    if (canonicalEpid !== "") {
+    if (canonicalEpid !== "EPID_UNRESOLVED") {
       try {
         canonicalSnapshot = await getMarketPricingSnapshot(canonicalEpid);
       } catch {

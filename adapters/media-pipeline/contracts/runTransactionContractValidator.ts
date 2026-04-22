@@ -8,6 +8,8 @@ const PRICE_EPS = 0.005;
 
 export type ContractWarningCode =
   | "EPID_DRIFT_WARNING"
+  | "EPID_CRITICAL_MISMATCH"
+  | "EPID_UNRESOLVED_WARNING"
   | "MARKET_SNAPSHOT_DRIFT_WARNING"
   | "EXECUTION_PRICE_NON_AUTHORITATIVE_FLAG"
   | "PROFIT_MODEL_DIVERGENCE_WARNING"
@@ -23,6 +25,8 @@ export interface RunTransactionContractValidationSummary {
   readonly epidDriftCount: number;
   readonly snapshotDriftCount: number;
   readonly priceMismatches: number;
+  readonly unresolvedSkuCount: number;
+  readonly epidsResolvedCount: number;
 }
 
 export interface RunTransactionContractValidationResult {
@@ -168,6 +172,8 @@ export function validateRunTransactionContractV1(
   let epidDriftCount = 0;
   let snapshotDriftCount = 0;
   let priceMismatches = 0;
+  let unresolvedSkuCount = 0;
+  let epidsResolvedCount = 0;
 
   const externalIndexed =
     input.listingDecisions !== undefined
@@ -216,7 +222,20 @@ export function validateRunTransactionContractV1(
     const sku = String(r.sku);
     const decision = r.listingDecision;
     const canonicalBinding = input.canonicalBindingBySku?.[sku];
-    const canonicalEpid = normEpid(canonicalBinding?.canonicalEpid ?? r.epid);
+    const canonicalEpid = normEpid(canonicalBinding?.canonicalEpid ?? "EPID_UNRESOLVED");
+    const canonicalMissing = canonicalBinding === undefined;
+    const canonicalUnresolved =
+      canonicalEpid.length === 0 || canonicalEpid === "EPID_UNRESOLVED";
+
+    if (canonicalUnresolved) {
+      unresolvedSkuCount += 1;
+      if (!warnedEpid.has(sku)) {
+        warnings.push({ code: "EPID_UNRESOLVED_WARNING", sku });
+        warnedEpid.add(sku);
+      }
+    } else {
+      epidsResolvedCount += 1;
+    }
 
     if (externalIndexed !== null) {
       const ext = externalIndexed.map.get(sku);
@@ -243,11 +262,27 @@ export function validateRunTransactionContractV1(
         return [];
       }),
     ];
-    const nonCanonicalDrift = epidSources.some((ep) => ep.length > 0 && ep !== canonicalEpid);
-    if (nonCanonicalDrift && !warnedEpid.has(sku)) {
-      warnings.push({ code: "EPID_DRIFT_WARNING", sku });
-      warnedEpid.add(sku);
+    const nonCanonicalDrift = epidSources.some(
+      (ep) => ep.length > 0 && ep !== "EPID_UNRESOLVED" && ep !== canonicalEpid
+    );
+    if (nonCanonicalDrift) {
+      warnings.push({ code: "EPID_CRITICAL_MISMATCH", sku });
       epidDriftCount += 1;
+    } else if (!canonicalUnresolved) {
+      const hasCanonicalInRows = epidSources.some((ep) => ep === canonicalEpid);
+      if (!hasCanonicalInRows && !warnedEpid.has(`${sku}:drift`)) {
+        warnings.push({ code: "EPID_DRIFT_WARNING", sku });
+        warnedEpid.add(`${sku}:drift`);
+        epidDriftCount += 1;
+      }
+    }
+
+    if (
+      canonicalMissing &&
+      !canonicalUnresolved &&
+      (normEpid(r.epid) !== "EPID_UNRESOLVED" || normEpid(decision.epid) !== "EPID_UNRESOLVED")
+    ) {
+      warnings.push({ code: "EPID_CRITICAL_MISMATCH", sku });
     }
 
     const canonicalSnapshot = canonicalBinding?.canonicalSnapshot ?? null;
@@ -299,6 +334,8 @@ export function validateRunTransactionContractV1(
       epidDriftCount,
       snapshotDriftCount,
       priceMismatches,
+      unresolvedSkuCount,
+      epidsResolvedCount,
     },
   };
 }

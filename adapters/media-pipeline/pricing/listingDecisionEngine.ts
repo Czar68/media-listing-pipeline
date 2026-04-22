@@ -19,6 +19,7 @@ export interface ListingDecision {
   readonly metadata: {
     readonly adjustmentFactor: number;
     readonly source: "epid_market" | "fallback";
+    readonly epidStatus?: "RESOLVED" | "UNRESOLVED";
     readonly estimatedFees: number;
     readonly estimatedProfit: number;
   };
@@ -27,11 +28,12 @@ export interface ListingDecision {
 export interface PricingContext {
   readonly strategyId: string;
   readonly strategyType: "aggressive" | "balanced" | "safe";
+  /** Observability-only; not used for authoritative EPID selection. */
+  readonly epid?: string;
   /**
    * When the strategy layer has EPID hints (e.g. from {@link StrategySelectionContext.enrichedBySku}),
    * EPID-based anchor pricing is used. Omitted or empty → fallback model.
    */
-  readonly epid?: string;
   readonly canonicalEpid?: string;
   readonly canonicalSnapshot?: MarketPricingSnapshot | null;
   readonly matchConfidence?: number;
@@ -105,12 +107,10 @@ export async function createListingDecision(
   context: PricingContext
 ): Promise<ListingDecision> {
   const tier = STRATEGY_TIERS[context.strategyType] ?? STRATEGY_TIERS.balanced;
-  const epidRaw =
-    context.canonicalEpid !== undefined && String(context.canonicalEpid).trim() !== ""
-      ? context.canonicalEpid
-      : context.epid;
-  const epid = epidRaw !== undefined ? String(epidRaw).trim() : "";
-  const hasEpid = epid.length > 0;
+  const canonicalEpid = context.canonicalEpid !== undefined ? String(context.canonicalEpid).trim() : "";
+  const isUnresolved = canonicalEpid.length === 0 || canonicalEpid === "EPID_UNRESOLVED";
+  const epid = isUnresolved ? "EPID_UNRESOLVED" : canonicalEpid;
+  const hasEpid = !isUnresolved;
 
   const matchConf =
     context.matchConfidence !== undefined && Number.isFinite(context.matchConfidence)
@@ -169,14 +169,15 @@ export async function createListingDecision(
 
   return {
     sku: item.sku,
-    epid: hasEpid ? epid : undefined,
-    strategyId: context.strategyId,
+    epid,
+    strategyId: isUnresolved ? "NO_EPID_STRATEGY" : context.strategyId,
     recommendedPrice,
     minAcceptablePrice,
     confidence,
     metadata: {
       adjustmentFactor,
       source,
+      epidStatus: isUnresolved ? "UNRESOLVED" : "RESOLVED",
       estimatedFees: profitModel.estimatedFees,
       estimatedProfit: profitModel.estimatedProfit,
     },

@@ -7,7 +7,6 @@ import {
   type ExecutionTraceEvent,
 } from "./executionTrace";
 import {
-  enrichWithEpid,
   type EpidEnrichedInventoryItem,
 } from "./epidEnricher";
 import { MediaAdapterImpl } from "./mediaAdapter";
@@ -102,15 +101,17 @@ export async function runBatch(
     })
   );
 
-  const enrichedInventoryItems: EpidEnrichedInventoryItem[] = await Promise.all(
-    normalizedInventoryItems.map(async (row) => {
-      const existing = row as NormalizedInventoryItem & Partial<EpidEnrichedInventoryItem>;
-      if (existing.epid !== undefined && String(existing.epid).trim() !== "") {
-        return existing;
-      }
-      return enrichWithEpid(row);
-    })
-  );
+  const enrichedInventoryItems: EpidEnrichedInventoryItem[] = normalizedInventoryItems.map((row) => {
+    const existing = row as NormalizedInventoryItem & Partial<EpidEnrichedInventoryItem>;
+    const epid =
+      existing.epid !== undefined && String(existing.epid).trim() !== ""
+        ? String(existing.epid).trim()
+        : "EPID_UNRESOLVED";
+    return {
+      ...existing,
+      epid,
+    };
+  });
 
   events.push(
     createTraceEvent("TRACE_EXECUTE", runId, {

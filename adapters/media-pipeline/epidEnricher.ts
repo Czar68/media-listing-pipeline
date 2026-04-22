@@ -60,6 +60,7 @@ function aspectsFromSummary(summary: BrowseItemSummary | undefined): Record<stri
 
 export interface EpidEnrichedInventoryItem extends NormalizedInventoryItem {
   epid?: string;
+  epidSource?: "observability_only";
   categoryId?: string;
   itemAspects?: Record<string, string[]>;
   matchConfidence?: number;
@@ -70,22 +71,27 @@ export interface EpidEnrichedInventoryItem extends NormalizedInventoryItem {
  * On any failure or missing token, returns `item` unchanged. Never throws.
  */
 export async function enrichWithEpid(
-  item: NormalizedInventoryItem
+  item: NormalizedInventoryItem,
+  options?: { readonly mode?: "execution" | "ingestion" }
 ): Promise<EpidEnrichedInventoryItem> {
+  if (options?.mode !== "ingestion") {
+    return item as EpidEnrichedInventoryItem;
+  }
+
   const existing = item as NormalizedInventoryItem & Partial<EpidEnrichedInventoryItem>;
   if (existing.epid !== undefined && String(existing.epid).trim() !== "") {
-    return existing;
+    return { ...existing, epidSource: "observability_only" };
   }
 
   try {
     const token = String(process.env.EBAY_APP_TOKEN ?? "").trim();
     if (!token) {
-      return { ...item };
+      return { ...item, epidSource: "observability_only" };
     }
 
     const q = buildSearchQuery(item);
     if (!q) {
-      return { ...item };
+      return { ...item, epidSource: "observability_only" };
     }
 
     const base = getEbayApiBaseUrl();
@@ -100,7 +106,7 @@ export async function enrichWithEpid(
     });
 
     if (!res.ok) {
-      return { ...item };
+      return { ...item, epidSource: "observability_only" };
     }
 
     const data = (await res.json()) as BrowseSearchResponse;
@@ -109,7 +115,7 @@ export async function enrichWithEpid(
     const first = summaries[0];
 
     if (epid === null) {
-      return { ...item };
+      return { ...item, epidSource: "observability_only" };
     }
 
     const categoryId =
@@ -123,11 +129,12 @@ export async function enrichWithEpid(
     return {
       ...item,
       epid,
+      epidSource: "observability_only",
       categoryId: categoryId || undefined,
       itemAspects,
       matchConfidence,
     };
   } catch {
-    return { ...item };
+    return { ...item, epidSource: "observability_only" };
   }
 }
