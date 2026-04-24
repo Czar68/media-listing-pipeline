@@ -40,11 +40,12 @@ export interface FinalListingRecord {
   };
   readonly strategyId: string;
   readonly listingDecision: ListingDecision;
+  /** Present only when fetched during canonical binding; otherwise null. */
   readonly marketSnapshot: {
     readonly medianPrice: number;
     readonly sampleSize: number;
     readonly confidence: number;
-  };
+  } | null;
   readonly profitModel: {
     readonly recommendedPrice: number;
     readonly minProfitablePrice: number;
@@ -70,9 +71,10 @@ export interface BuildFinalListingRecordParams {
   readonly listingDecision: ListingDecision;
   /** Execution-time strategy (same run as the decision); retained for audit and future fields. */
   readonly listingStrategy: ListingStrategy;
-  /** Canonical EPID for the run-bound SKU (single-source for persistence). */
-  readonly canonicalEpid?: string;
-  readonly marketSnapshot: MarketPricingSnapshot;
+  /** Canonical EPID from binding only (never derived from the decision). */
+  readonly canonicalEpid: string;
+  /** Canonical market snapshot from binding only, or null when none was fetched. */
+  readonly marketSnapshot: MarketPricingSnapshot | null;
   readonly profitModel: ProfitPricingModel;
   readonly executionResult: ExecutionResult;
   readonly trace: Pick<ExecutionTrace, "runId">;
@@ -152,25 +154,28 @@ export function buildFinalListingRecord(
   const row = findExecutionForSku(executionResult, listingDecision.sku);
   const executionSlice = executionSliceFromRow(row, extractListingId);
 
+  const canonicalEpid = String(params.canonicalEpid).trim();
+  const epid =
+    canonicalEpid === "" || canonicalEpid === "EPID_UNRESOLVED"
+      ? "EPID_UNRESOLVED"
+      : canonicalEpid;
+
   return {
     sku: listingDecision.sku,
-    epid:
-      params.canonicalEpid !== undefined && String(params.canonicalEpid).trim() !== ""
-        ? String(params.canonicalEpid).trim()
-        : "EPID_UNRESOLVED",
+    epid,
     metadata: {
-      epidResolved:
-        params.canonicalEpid !== undefined &&
-        String(params.canonicalEpid).trim() !== "" &&
-        String(params.canonicalEpid).trim() !== "EPID_UNRESOLVED",
+      epidResolved: epid !== "EPID_UNRESOLVED",
     },
     strategyId: listingDecision.strategyId,
     listingDecision,
-    marketSnapshot: {
-      medianPrice: marketSnapshot.medianPrice,
-      sampleSize: marketSnapshot.sampleSize,
-      confidence: marketSnapshot.confidence,
-    },
+    marketSnapshot:
+      marketSnapshot === null
+        ? null
+        : {
+            medianPrice: marketSnapshot.medianPrice,
+            sampleSize: marketSnapshot.sampleSize,
+            confidence: marketSnapshot.confidence,
+          },
     profitModel: {
       recommendedPrice: profitModel.recommendedPrice,
       minProfitablePrice: profitModel.minProfitablePrice,

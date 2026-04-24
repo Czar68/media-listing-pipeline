@@ -1,0 +1,154 @@
+[
+  {
+    "sku": "dry-run-trace-e1",
+    "epid": "EPID_UNRESOLVED",
+    "metadata": {
+      "epidResolved": false
+    },
+    "strategyId": "NO_EPID_STRATEGY",
+    "listingDecision": {
+      "sku": "dry-run-trace-e1",
+      "epid": "EPID_UNRESOLVED",
+      "strategyId": "NO_EPID_STRATEGY",
+      "recommendedPrice": 10.86,
+      "minAcceptablePrice": 9.23,
+      "confidence": 0.26,
+      "metadata": {
+        "adjustmentFactor": 1.086,
+        "source": "fallback",
+        "epidStatus": "UNRESOLVED",
+        "estimatedFees": 1.71,
+        "estimatedProfit": 9.15
+      }
+    },
+    "marketSnapshot": null,
+    "profitModel": {
+      "recommendedPrice": 10.86,
+      "minProfitablePrice": 9.23,
+      "estimatedProfit": 9.15
+    },
+    "executionResult": {
+      "status": "failed",
+      "error": {
+        "type": "UNKNOWN",
+        "message": "No execution row found for SKU"
+      }
+    },
+    "traceRunId": "32eb7cab-cfd8-46f1-a42d-e91f5e4fa8c3",
+    "timestamp": "2026-04-24T21:35:11.600Z"
+  },
+  {
+    "sku": "dry-run-trace-e2",
+    "epid": "EPID_UNRESOLVED",
+    "metadata": {
+      "epidResolved": false
+    },
+    "strategyId": "NO_EPID_STRATEGY",
+    "listingDecision": {
+      "sku": "dry-run-trace-e2",
+      "epid": "EPID_UNRESOLVED",
+      "strategyId": "NO_EPID_STRATEGY",
+      "recommendedPrice": 10.63,
+      "minAcceptablePrice": 9.04,
+      "confidence": 0.26,
+      "metadata": {
+        "adjustmentFactor": 1.063,
+        "source": "fallback",
+        "epidStatus": "UNRESOLVED",
+        "estimatedFees": 1.68,
+        "estimatedProfit": 8.95
+      }
+    },
+    "marketSnapshot": null,
+    "profitModel": {
+      "recommendedPrice": 10.63,
+      "minProfitablePrice": 9.04,
+      "estimatedProfit": 8.95
+    },
+    "executionResult": {
+      "status": "failed",
+      "error": {
+        "type": "UNKNOWN",
+        "message": "No execution row found for SKU"
+      }
+    },
+    "traceRunId": "32eb7cab-cfd8-46f1-a42d-e91f5e4fa8c3",
+    "timestamp": "2026-04-24T21:35:11.600Z"
+  },
+  {
+    "sku": "dry-run-trace-e3",
+    "epid": "EPID_UNRESOLVED",
+    "metadata": {
+      "epidResolved": false
+    },
+    "strategyId": "NO_EPID_STRATEGY",
+    "listingDecision": {
+      "sku": "dry-run-trace-e3",
+      "epid": "EPID_UNRESOLVED",
+      "strategyId": "NO_EPID_STRATEGY",
+      "recommendedPrice": 10.53,
+      "minAcceptablePrice": 8.95,
+      "confidence": 0.26,
+      "metadata": {
+        "adjustmentFactor": 1.053,
+        "source": "fallback",
+        "epidStatus": "UNRESOLVED",
+        "estimatedFees": 1.67,
+        "estimatedProfit": 8.86
+      }
+    },
+    "marketSnapshot": null,
+    "profitModel": {
+      "recommendedPrice": 10.53,
+      "minProfitablePrice": 8.95,
+      "estimatedProfit": 8.86
+    },
+    "executionResult": {
+      "status": "failed",
+      "error": {
+        "type": "UNKNOWN",
+        "message": "No execution row found for SKU"
+      }
+    },
+    "traceRunId": "32eb7cab-cfd8-46f1-a42d-e91f5e4fa8c3",
+    "timestamp": "2026-04-24T21:35:11.600Z"
+  },
+  {
+    "sku": "dry-run-trace-e4",
+    "epid": "EPID_UNRESOLVED",
+    "metadata": {
+      "epidResolved": false
+    },
+    "strategyId": "NO_EPID_STRATEGY",
+    "listingDecision": {
+      "sku": "dry-run-trace-e4",
+      "epid": "EPID_UNRESOLVED",
+      "strategyId": "NO_EPID_STRATEGY",
+      "recommendedPrice": 11.8,
+      "minAcceptablePrice": 10.03,
+      "confidence": 0.26,
+      "metadata": {
+        "adjustmentFactor": 1.18,
+        "source": "fallback",
+        "epidStatus": "UNRESOLVED",
+        "estimatedFees": 1.83,
+        "estimatedProfit": 9.97
+      }
+    },
+    "marketSnapshot": null,
+    "profitModel": {
+      "recommendedPrice": 11.8,
+      "minProfitablePrice": 10.03,
+      "estimatedProfit": 9.97
+    },
+    "executionResult": {
+      "status": "failed",
+      "error": {
+        "type": "UNKNOWN",
+        "message": "No execution row found for SKU"
+      }
+    },
+    "traceRunId": "32eb7cab-cfd8-46f1-a42d-e91f5e4fa8c3",
+    "timestamp": "2026-04-24T21:35:11.600Z"
+  }
+]

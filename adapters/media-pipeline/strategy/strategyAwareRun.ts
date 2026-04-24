@@ -19,7 +19,7 @@ import {
 } from "../epidEnricher";
 import {
   buildFinalListingRecord,
-  buildFallbackMarketSnapshotFromDecision,
+  type FinalListingRecord,
   profitPricingModelFromListingDecision,
 } from "../finalization/finalListingRecord";
 import { getMarketPricingSnapshot, type MarketPricingSnapshot } from "../pricing/marketPricingEngine";
@@ -27,6 +27,72 @@ import {
   validateRunTransactionContractV1,
   type RunTransactionContractValidationResult,
 } from "../contracts/runTransactionContractValidator";
+
+/** Temporary: set `MEDIA_PIPELINE_DRY_RUN_TRACE=1` to log canonical → decision → record flow. */
+function dryRunTraceEnabled(): boolean {
+  return process.env.MEDIA_PIPELINE_DRY_RUN_TRACE === "1";
+}
+
+function logDryRunCanonicalBindings(map: ReadonlyMap<string, CanonicalRunBinding>): void {
+  if (!dryRunTraceEnabled()) return;
+  console.log("[DRY_RUN_EXECUTION_TRACE] --- Canonical bindings ---");
+  for (const [sku, b] of map) {
+    const snap =
+      b.canonicalSnapshot === null
+        ? null
+        : {
+            medianPrice: b.canonicalSnapshot.medianPrice,
+            sampleSize: b.canonicalSnapshot.sampleSize,
+            confidence: b.canonicalSnapshot.confidence,
+          };
+    console.log(
+      JSON.stringify({
+        phase: "canonical_binding",
+        sku,
+        canonicalEpid: b.canonicalEpid,
+        status: b.status,
+        canonicalSnapshot: snap,
+      })
+    );
+  }
+}
+
+function logDryRunListingDecisions(
+  normalized: readonly NormalizedInventoryItem[],
+  paired: readonly { decision: ListingDecision }[]
+): void {
+  if (!dryRunTraceEnabled()) return;
+  console.log("[DRY_RUN_EXECUTION_TRACE] --- Listing decisions ---");
+  for (let i = 0; i < paired.length; i++) {
+    const sku = String(normalized[i]?.sku ?? "");
+    const { decision } = paired[i]!;
+    console.log(
+      JSON.stringify({
+        phase: "listing_decision",
+        sku,
+        recommendedPrice: decision.recommendedPrice,
+        epid: decision.epid,
+        pricingSource: decision.metadata.source,
+      })
+    );
+  }
+}
+
+function logDryRunFinalRecords(records: readonly FinalListingRecord[]): void {
+  if (!dryRunTraceEnabled()) return;
+  console.log("[DRY_RUN_EXECUTION_TRACE] --- Final records ---");
+  for (const rec of records) {
+    console.log(
+      JSON.stringify({
+        phase: "final_record",
+        sku: rec.sku,
+        epid: rec.epid,
+        marketSnapshot: rec.marketSnapshot,
+        executionResultStatus: rec.executionResult.status,
+      })
+    );
+  }
+}
 
 export interface StrategyAwareRunOptions {
   /**
@@ -64,7 +130,7 @@ interface CanonicalRunBinding {
   readonly canonicalSnapshot: MarketPricingSnapshot | null;
   readonly snapshotStatus: "OK" | "MISSING";
   readonly epidConflict: boolean;
-  readonly bindingSource: "context" | "enrichment" | "none";
+  readonly bindingSource: "context" | "none";
   readonly matchConfidence?: number;
 }
 
@@ -91,16 +157,29 @@ async function resolveCanonicalBinding(
 ): Promise<ReadonlyMap<string, CanonicalRunBinding>> {
   const out = new Map<string, CanonicalRunBinding>();
 
+  /** Non-empty, non-placeholder EPID string, or empty when unusable. */
+  function validBoundEpid(raw: unknown): string {
+    if (raw === undefined || raw === null) {
+      return "";
+    }
+    const s = String(raw).trim();
+    if (s === "" || s === "EPID_UNRESOLVED") {
+      return "";
+    }
+    return s;
+  }
+
   for (const item of normalized) {
     const sku = String(item.sku);
     const contextEnriched = pickEnrichedForSku(sku, context);
     const normalizedWithOptionalEpid = item as NormalizedInventoryItem & Partial<EpidEnrichedInventoryItem>;
-    const normalizedEpid =
-      normalizedWithOptionalEpid.epid !== undefined &&
-      String(normalizedWithOptionalEpid.epid).trim() !== "" &&
-      String(normalizedWithOptionalEpid.epid).trim() !== "EPID_UNRESOLVED"
-        ? String(normalizedWithOptionalEpid.epid).trim()
+    const fromNormalizedField = validBoundEpid(normalizedWithOptionalEpid.epid);
+    const meta = item.metadata;
+    const fromMetadata =
+      meta !== undefined && typeof meta === "object" && meta !== null && !Array.isArray(meta)
+        ? validBoundEpid((meta as Record<string, unknown>).epid)
         : "";
+    const chosenEpid = fromNormalizedField !== "" ? fromNormalizedField : fromMetadata;
 
     let enrichedResult: EpidEnrichedInventoryItem | null = null;
     try {
@@ -116,14 +195,14 @@ async function resolveCanonicalBinding(
         : "";
 
     const status: CanonicalBindingStatus =
-      normalizedEpid !== "" ? "RESOLVED" : "UNRESOLVED_BLOCKED";
-    const canonicalEpid =
-      status === "RESOLVED" ? normalizedEpid : "";
+      chosenEpid !== "" ? "RESOLVED" : "UNRESOLVED_BLOCKED";
+    const canonicalEpid = chosenEpid !== "" ? chosenEpid : "EPID_UNRESOLVED";
     const bindingSource: CanonicalRunBinding["bindingSource"] =
-      normalizedEpid !== "" ? "context" : "none";
+      chosenEpid !== "" ? "context" : "none";
     const epidConflict =
-      status === "UNRESOLVED_BLOCKED" ||
-      (enrichedEpid !== "" && enrichedEpid !== canonicalEpid);
+      status === "UNRESOLVED_BLOCKED"
+        ? enrichedEpid !== ""
+        : enrichedEpid !== "" && enrichedEpid !== canonicalEpid;
 
     let canonicalSnapshot: MarketPricingSnapshot | null = null;
     let snapshotStatus: CanonicalRunBinding["snapshotStatus"] = "MISSING";
@@ -147,9 +226,7 @@ async function resolveCanonicalBinding(
       bindingSource,
       ...(contextEnriched?.matchConfidence !== undefined
         ? { matchConfidence: contextEnriched.matchConfidence }
-        : enrichedResult?.matchConfidence !== undefined
-          ? { matchConfidence: enrichedResult.matchConfidence }
-          : {}),
+        : {}),
     });
   }
 
@@ -170,6 +247,7 @@ export async function strategyAwareRun(
   const rawResults = scanBatchRawItems(items, scanOptions);
   const normalized: NormalizedInventoryItem[] = rawResults.map((r) => adapter.normalize(r));
   const canonicalBindingBySku = await resolveCanonicalBinding(normalized, context);
+  logDryRunCanonicalBindings(canonicalBindingBySku);
 
   const includeDecisions = options?.includeListingDecisions !== false;
 
@@ -180,9 +258,7 @@ export async function strategyAwareRun(
         item,
         enriched: {
           ...pickEnrichedForSku(item.sku, context),
-          ...(binding?.canonicalEpid !== undefined && binding.canonicalEpid !== ""
-            ? { epid: binding.canonicalEpid }
-            : {}),
+          ...(binding?.status === "RESOLVED" ? { epid: binding.canonicalEpid } : {}),
           ...(binding?.matchConfidence !== undefined
             ? { matchConfidence: binding.matchConfidence }
             : {}),
@@ -195,6 +271,7 @@ export async function strategyAwareRun(
       return { strategy, decision };
     })
   );
+  logDryRunListingDecisions(normalized, paired);
 
   const strategies = paired.map((p) => p.strategy);
   const preparedItems = applyStrategyToItems(items, strategies);
@@ -205,12 +282,12 @@ export async function strategyAwareRun(
   const finalRecords = await Promise.all(
     paired.map(async ({ strategy, decision }) => {
       const binding = canonicalBindingBySku.get(String(decision.sku));
-      const marketSnapshot = binding?.canonicalSnapshot ?? buildFallbackMarketSnapshotFromDecision(decision);
+      const marketSnapshot = binding?.canonicalSnapshot ?? null;
       const profitModel = profitPricingModelFromListingDecision(decision);
       return buildFinalListingRecord({
         listingDecision: decision,
         listingStrategy: strategy,
-        canonicalEpid: binding?.canonicalEpid ?? "",
+        canonicalEpid: binding?.canonicalEpid ?? "EPID_UNRESOLVED",
         marketSnapshot,
         profitModel,
         executionResult: batchResult.execution,
@@ -219,6 +296,7 @@ export async function strategyAwareRun(
       });
     })
   );
+  logDryRunFinalRecords(finalRecords);
   await persistListingRecords({ records: finalRecords });
 
   const contractValidation = validateRunTransactionContractV1({
@@ -228,8 +306,7 @@ export async function strategyAwareRun(
       [...canonicalBindingBySku.entries()].map(([sku, binding]) => [
         sku,
         {
-          canonicalEpid:
-            binding.status === "RESOLVED" ? binding.canonicalEpid : "EPID_UNRESOLVED",
+          canonicalEpid: binding.canonicalEpid,
           canonicalSnapshot: binding.canonicalSnapshot,
         },
       ])

@@ -31,8 +31,8 @@ export interface PricingContext {
   /** Observability-only; not used for authoritative EPID selection. */
   readonly epid?: string;
   /**
-   * When the strategy layer has EPID hints (e.g. from {@link StrategySelectionContext.enrichedBySku}),
-   * EPID-based anchor pricing is used. Omitted or empty → fallback model.
+   * Canonical EPID from binding. EPID-market pricing runs only when this is resolved and
+   * {@link PricingContext.canonicalSnapshot} is non-null; otherwise the non-EPID pricing path is used.
    */
   readonly canonicalEpid?: string;
   readonly canonicalSnapshot?: MarketPricingSnapshot | null;
@@ -79,15 +79,6 @@ function hash01(input: string): number {
 }
 
 /**
- * Stub: EPID string implies catalog alignment; spread price slightly by hashed epid suffix.
- * Replace with marketplace comps when economics are wired in.
- */
-function epidAnchorComponent(epid: string): number {
-  const spread = hash01(epid) * 2.5;
-  return spread;
-}
-
-/**
  * Fallback uses title + sku for deterministic micro-variation (no EPID).
  */
 function fallbackAnchorComponent(item: NormalizedInventoryItem): number {
@@ -126,25 +117,14 @@ export async function createListingDecision(
   let basePrice: number;
   let strategyAdjustmentFactor: number;
 
-  if (hasEpid) {
+  const marketSnapshot = context.canonicalSnapshot ?? null;
+
+  if (hasEpid && marketSnapshot) {
     source = "epid_market";
-    const marketSnapshot = context.canonicalSnapshot ?? null;
-    
-    if (marketSnapshot) {
-      // Use market median as base anchor
-      basePrice = marketSnapshot.medianPrice;
-      confidence = clampConfidence(
-        marketSnapshot.confidence + matchConf * 0.2 + tier.confidenceOffset
-      );
-    } else {
-      // Fallback to stub if market snapshot fails
-      const anchor = tier.anchor + epidAnchorComponent(epid);
-      basePrice = anchor * tier.priceMultiplier;
-      confidence = clampConfidence(
-        0.52 + matchConf * 0.38 + tier.confidenceOffset + 0.08
-      );
-    }
-    // Apply EPID quality boost to strategy adjustment
+    basePrice = marketSnapshot.medianPrice;
+    confidence = clampConfidence(
+      marketSnapshot.confidence + matchConf * 0.2 + tier.confidenceOffset
+    );
     const epidQualityBoost = 1 + matchConf * 0.06;
     strategyAdjustmentFactor = tier.priceMultiplier * epidQualityBoost;
   } else {

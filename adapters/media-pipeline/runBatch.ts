@@ -9,9 +9,93 @@ import {
 import {
   type EpidEnrichedInventoryItem,
 } from "./epidEnricher";
+import { toEbayInventoryItem, type EbayInventoryItem } from "./ebayMapper";
 import { MediaAdapterImpl } from "./mediaAdapter";
 import { scanBatchRawItems, type ScanBatchOptions } from "./scanner";
 import type { NormalizedInventoryItem, RawScanResult } from "./types";
+
+/** Temporary: set `MEDIA_PIPELINE_DRY_RUN_TRACE=1` to log execution inputs. */
+function dryRunTraceEnabled(): boolean {
+  return process.env.MEDIA_PIPELINE_DRY_RUN_TRACE === "1";
+}
+
+function dryRunStrategyBasePriceFromMetadata(item: NormalizedInventoryItem): number | undefined {
+  const m = item.metadata;
+  if (!m || typeof m !== "object") return undefined;
+  const listingStrategy = m.listingStrategy as Record<string, unknown> | undefined;
+  const pricing = listingStrategy?.pricing as Record<string, unknown> | undefined;
+  const basePrice = pricing?.basePrice;
+  return typeof basePrice === "number" && Number.isFinite(basePrice) ? basePrice : undefined;
+}
+
+function dryRunPayloadListPrice(payload: EbayInventoryItem): number | undefined {
+  const p = payload as EbayInventoryItem & {
+    price?: number | { value?: string | number };
+    listingPrice?: number;
+  };
+  if (typeof p.price === "number" && Number.isFinite(p.price)) {
+    return p.price;
+  }
+  if (p.price && typeof p.price === "object" && "value" in p.price) {
+    const v = (p.price as { value?: string | number }).value;
+    const n = typeof v === "string" ? parseFloat(v) : v;
+    if (typeof n === "number" && Number.isFinite(n)) {
+      return n;
+    }
+  }
+  if (typeof p.listingPrice === "number" && Number.isFinite(p.listingPrice)) {
+    return p.listingPrice;
+  }
+  return undefined;
+}
+
+function logDryRunExecutionInputs(
+  normalizedInventoryItems: readonly NormalizedInventoryItem[],
+  enrichedInventoryItems: readonly EpidEnrichedInventoryItem[],
+  canonicalBindingBySku: ReadonlyMap<string, CanonicalRunBinding>
+): void {
+  if (!dryRunTraceEnabled()) return;
+  console.log("[DRY_RUN_EXECUTION_TRACE] --- Execution inputs (runBatch) ---");
+  const bySku = new Map(enrichedInventoryItems.map((row) => [String(row.sku), row]));
+  for (const row of normalizedInventoryItems) {
+    const sku = String(row.sku);
+    const binding = canonicalBindingBySku.get(sku);
+    const enriched = bySku.get(sku);
+    if (enriched === undefined) {
+      console.log(
+        JSON.stringify({
+          phase: "execution_input",
+          sku,
+          epidSentToExecution: null,
+          payloadListPrice: null,
+          strategyBasePriceFromMetadata: dryRunStrategyBasePriceFromMetadata(row),
+          executionSkipped: true,
+          bindingStatus: binding?.status ?? "NO_BINDING",
+        })
+      );
+      continue;
+    }
+    let payloadList: number | undefined;
+    try {
+      const payload = toEbayInventoryItem(enriched);
+      payloadList = dryRunPayloadListPrice(payload);
+    } catch {
+      payloadList = undefined;
+    }
+    const epi = enriched as NormalizedInventoryItem & Partial<EpidEnrichedInventoryItem>;
+    console.log(
+      JSON.stringify({
+        phase: "execution_input",
+        sku,
+        epidSentToExecution: epi.epid ?? null,
+        payloadListPrice: payloadList ?? null,
+        strategyBasePriceFromMetadata: dryRunStrategyBasePriceFromMetadata(enriched),
+        executionSkipped: false,
+        bindingStatus: binding?.status ?? "NO_BINDING",
+      })
+    );
+  }
+}
 
 /**
  * Single pipeline contract: scan → normalize → EPID enrichment (optional) → map+execute.
@@ -149,6 +233,14 @@ export async function runBatch(
       },
     ];
   });
+
+  if (canonicalBindingBySku !== null) {
+    logDryRunExecutionInputs(
+      normalizedInventoryItems,
+      enrichedInventoryItems,
+      canonicalBindingBySku
+    );
+  }
 
   events.push(
     createTraceEvent("TRACE_EXECUTE", runId, {
