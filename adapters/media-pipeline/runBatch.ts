@@ -13,6 +13,7 @@ import { toEbayInventoryItem, type EbayInventoryItem } from "./ebayMapper";
 import { MediaAdapterImpl } from "./mediaAdapter";
 import { scanBatchRawItems, type ScanBatchOptions } from "./scanner";
 import type { NormalizedInventoryItem, RawScanResult } from "./types";
+import type { PublishResult } from "./execution/types";
 
 /** Temporary: set `MEDIA_PIPELINE_DRY_RUN_TRACE=1` to log execution inputs. */
 function dryRunTraceEnabled(): boolean {
@@ -123,6 +124,46 @@ function isCanonicalBindingMap(
 
 function executionModeLabel(): "ebay" | "mock" {
   return process.env.EXECUTION_MODE === "ebay" ? "ebay" : "mock";
+}
+
+/**
+ * Emits one TRACE_PUBLISH event per item that reached the publish step.
+ * Covers both successful publishes (on ExecutionSuccess) and failed publishes
+ * (on ExecutionFailed where publishResult is present).
+ * Sorted by SKU for deterministic trace ordering.
+ */
+function appendPublishTraceEvents(
+  runId: string,
+  execution: ExecutionResult,
+  events: ExecutionTraceEvent[]
+): void {
+  type PublishRow = { sku: unknown; publishResult: PublishResult };
+  const rows: PublishRow[] = [];
+
+  for (const s of execution.success) {
+    rows.push({ sku: s.item.sku, publishResult: s.publishResult });
+  }
+  for (const f of execution.failed) {
+    if (f.publishResult !== undefined) {
+      rows.push({ sku: f.item.sku, publishResult: f.publishResult });
+    }
+  }
+
+  rows.sort((a, b) => String(a.sku).localeCompare(String(b.sku)));
+
+  for (const { sku, publishResult } of rows) {
+    events.push(
+      createTraceEvent("TRACE_PUBLISH", runId, {
+        sku,
+        offerId: publishResult.offerId,
+        publishStatus: publishResult.status,
+        httpStatus: publishResult.httpStatus,
+        ...(publishResult.listingId !== undefined ? { listingId: publishResult.listingId } : {}),
+        ...(publishResult.errorCode !== undefined ? { errorCode: publishResult.errorCode } : {}),
+        ...(publishResult.errorMessage !== undefined ? { errorMessage: publishResult.errorMessage } : {}),
+      })
+    );
+  }
 }
 
 function appendErrorAndRecoveryEvents(
@@ -251,6 +292,7 @@ export async function runBatch(
 
   const execution: ExecutionResult = await executeBatchListings(enrichedInventoryItems);
 
+  appendPublishTraceEvents(runId, execution, events);
   appendErrorAndRecoveryEvents(runId, execution, events);
 
   const trace = buildExecutionTrace({

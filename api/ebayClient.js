@@ -86,6 +86,9 @@ async function request(opts, state = { after401Retry: false }) {
 
   const headers = { ...(opts.headers || {}) };
   headers.Authorization = `Bearer ${String(token).trim()}`;
+  // Required by eBay Sell Inventory API for all PUT/POST calls (errorId 25709 without these)
+  headers["Content-Language"] = "en-US";
+  headers["Accept-Language"] = "en-US";
 
   const init = {
     method,
