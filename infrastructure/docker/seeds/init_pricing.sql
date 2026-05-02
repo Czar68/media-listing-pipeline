@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS market_values (
+    id SERIAL PRIMARY KEY,
+    upc VARCHAR(255) NOT NULL,
+    average_sold_price DECIMAL(10, 2) NOT NULL,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
