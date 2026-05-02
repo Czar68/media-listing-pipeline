@@ -1,9 +1,9 @@
 # PROJECT STATE
 
-Status: PHASE_12_IN_PROGRESS
+Status: PHASE_13_IN_PROGRESS
 
 Current Phase:
-PHASE_12_EBAY_API_INTEGRATION
+PHASE_13_DYNAMIC_PRICING_ORACLE
 
 Approved Next Phase:
 TBD (not yet selected in this repo)
@@ -300,6 +300,12 @@ PHASE_04 — identity-application
 
 ---
 
-## PHASE_12_EBAY_API_INTEGRATION (2026-05-02)
+## PHASE_13_DYNAMIC_PRICING_ORACLE (2026-05-02)
 
 **Append-only note:** Phase started. Implemented the eBay Inventory Mapping Bridge. Updated `core/listing_engine/seo_optimiser.py` to generate inventory SKUs based on hub codes. Created `core/adapters/ebay_client.py` using the 2026 Inventory Mapping API with a `dry_run` mock mode. Updated `core/ai_broker/listing_worker.py` to route ready drafts to a `sync_pipeline` queue for final sync processing.
+
+---
+
+## PHASE_13_DYNAMIC_PRICING_ORACLE (2026-05-02)
+
+**Append-only note:** Phase started. Implemented the Dynamic Pricing Oracle with core/adapters/pricing_oracle.py querying the market_values table. Updated core/ai_broker/financial_worker.py to look up prices before calculation, handle nulls with a default 9.99 pricing/human review flag, and instituted a profit floor routing to reject low margin items.

@@ -13,7 +13,8 @@ if ROOT_DIR not in sys.path:
 try:
     from core.ingestor.schema import Manifest
     from core.financials.calculator import calculate_financials
-    print(" [v] Success: Manifest schema and calculator imported.")
+    from core.adapters.pricing_oracle import PricingOracle
+    print(" [v] Success: Manifest schema, calculator, and pricing oracle imported.")
 except ImportError as e:
     print(f" [!] Import Error: {e}")
     raise
@@ -28,6 +29,17 @@ def process_financials(manifest: Manifest) -> Manifest:
     """
     print(f" [*] Processing Financials for Transaction: {manifest.transaction_id}")
     
+    # Call PricingOracle
+    upc_or_title = manifest.identity.get("upc") or manifest.identity.get("title")
+    oracle = PricingOracle()
+    market_price = oracle.get_market_price(upc_or_title)
+    
+    if market_price is None:
+        manifest.financials["listing_price"] = 9.99
+        manifest.flags["human_review_required"] = True
+    else:
+        manifest.financials["listing_price"] = market_price
+
     # Extract listing_price and acquisition_cost from the manifest if available.
     # Defaulting to 0.0 if not present.
     listing_price = manifest.financials.get("listing_price", 0.0)
@@ -41,6 +53,11 @@ def process_financials(manifest: Manifest) -> Manifest:
     
     # Business logic for listing status
     net_profit = updated_financials.get("net_profit", 0.0)
+    
+    if net_profit < 1.50:
+        manifest.status = "REJECTED_LOW_MARGIN"
+        return manifest
+        
     if net_profit > 2.00:
         if not manifest.flags.get("human_review_required"):
             manifest.status = "ready_for_listing"
@@ -61,14 +78,17 @@ def handle_task(ch, method, properties, body):
         
         print(f" [v] Result: {enriched_manifest.model_dump_json()}")
         
-        # Route to listing_pipeline for draft generation
-        ch.queue_declare(queue="listing_pipeline_v2", durable=True)
-        ch.basic_publish(
-            exchange='',
-            routing_key="listing_pipeline_v2",
-            body=enriched_manifest.model_dump_json(),
-            properties=pika.BasicProperties(delivery_mode=2)
-        )
+        if enriched_manifest.status != "REJECTED_LOW_MARGIN":
+            # Route to listing_pipeline for draft generation
+            ch.queue_declare(queue="listing_pipeline_v2", durable=True)
+            ch.basic_publish(
+                exchange='',
+                routing_key="listing_pipeline_v2",
+                body=enriched_manifest.model_dump_json(),
+                properties=pika.BasicProperties(delivery_mode=2)
+            )
+        else:
+            print(f" [x] Item rejected: {enriched_manifest.status}")
         
         ch.basic_ack(delivery_tag=method.delivery_tag)
     except Exception as e:
