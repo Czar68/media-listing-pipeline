@@ -19,3 +19,14 @@ def generate_ebay_title(title: str, season_volume: str = "", disc_info: str = ""
         base = base[:max_base_len].strip()
         
     return f"{base}{suffix}"
+
+from datetime import datetime
+
+def generate_sku(hub_code: str) -> str:
+    """
+    Generates a primary key SKU for eBay Inventory.
+    Format: MD-[HUB_CODE]-[YYMMDD]
+    """
+    date_str = datetime.now().strftime("%y%m%d")
+    clean_hub = str(hub_code).strip() if hub_code else "UNKNOWN"
+    return f"MD-{clean_hub}-{date_str}"

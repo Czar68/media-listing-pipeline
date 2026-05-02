@@ -1,9 +1,9 @@
 # PROJECT STATE
 
-Status: PHASE_11_IN_PROGRESS
+Status: PHASE_12_IN_PROGRESS
 
 Current Phase:
-PHASE_11_BULK_STRESS_TESTING
+PHASE_12_EBAY_API_INTEGRATION
 
 Approved Next Phase:
 TBD (not yet selected in this repo)
@@ -297,3 +297,9 @@ PHASE_04 — identity-application
 ## PHASE_11_BULK_STRESS_TESTING (2026-05-02)
 
 **Append-only note:** Phase started. Implemented Bulk Pipeline Injection and Draft Validation. Added `scripts/bulk_test_injection.py` to blast 5 unique manifests concurrently with valid and invalid Hub Codes to test the `human_review` gate. Added `scripts/check_drafts.py` to parse `data/drafts/` and print a summary verification table. Validated concurrency logic for no file-write collisions by scaling the drafts out by UUID-based filenames.
+
+---
+
+## PHASE_12_EBAY_API_INTEGRATION (2026-05-02)
+
+**Append-only note:** Phase started. Implemented the eBay Inventory Mapping Bridge. Updated `core/listing_engine/seo_optimiser.py` to generate inventory SKUs based on hub codes. Created `core/adapters/ebay_client.py` using the 2026 Inventory Mapping API with a `dry_run` mock mode. Updated `core/ai_broker/listing_worker.py` to route ready drafts to a `sync_pipeline` queue for final sync processing.

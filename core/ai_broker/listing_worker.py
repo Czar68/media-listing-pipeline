@@ -13,7 +13,7 @@ if ROOT_DIR not in sys.path:
 try:
     from core.ingestor.schema import Manifest
     from core.listing_engine.templates import get_disc_only_description
-    from core.listing_engine.seo_optimiser import generate_ebay_title
+    from core.listing_engine.seo_optimiser import generate_ebay_title, generate_sku
     print(" [v] Success: Modules imported.")
 except ImportError as e:
     print(f" [!] Import Error: {e}")
@@ -41,6 +41,9 @@ def process_listing(manifest: Manifest) -> dict:
     # Generate SEO Title
     ebay_title = generate_ebay_title(title=title)
     
+    # Generate SKU
+    sku = generate_sku(manifest.raw_identifier)
+    
     # Generate Description
     ebay_description = get_disc_only_description(title=title)
     
@@ -54,6 +57,7 @@ def process_listing(manifest: Manifest) -> dict:
         "transaction_id": manifest.transaction_id,
         "draft_status": draft_status,
         "ebay_category_id": 617,
+        "sku": sku,
         "title": ebay_title,
         "description": ebay_description,
         "financials": manifest.financials,
@@ -76,6 +80,16 @@ def handle_task(ch, method, properties, body):
         manifest = Manifest(**data)
         
         draft = process_listing(manifest)
+        
+        if draft["draft_status"] == "READY_TO_PUBLISH":
+            print(f" [->] Routing to sync_pipeline...")
+            ch.queue_declare(queue="sync_pipeline", durable=True)
+            ch.basic_publish(
+                exchange='',
+                routing_key="sync_pipeline",
+                body=json.dumps(draft),
+                properties=pika.BasicProperties(delivery_mode=2)
+            )
         
         ch.basic_ack(delivery_tag=method.delivery_tag)
     except Exception as e:
