@@ -54,18 +54,14 @@ def process_financials(manifest: Manifest) -> Manifest:
     # Business logic for listing status
     net_profit = updated_financials.get("net_profit", 0.0)
     
-    if net_profit < 1.50:
-        manifest.status = "REJECTED_LOW_MARGIN"
+    if net_profit < 2.00:
+        manifest.status = "STATUS_LOT_ONLY"
         return manifest
         
-    if net_profit > 2.00:
-        if not manifest.flags.get("human_review_required"):
-            manifest.status = "ready_for_listing"
-        else:
-            manifest.status = "flagged_for_review"
+    if not manifest.flags.get("human_review_required"):
+        manifest.status = "ready_for_listing"
     else:
         manifest.status = "flagged_for_review"
-        manifest.flags["human_review_required"] = True
         
     return manifest
 
@@ -78,7 +74,7 @@ def handle_task(ch, method, properties, body):
         
         print(f" [v] Result: {enriched_manifest.model_dump_json()}")
         
-        if enriched_manifest.status != "REJECTED_LOW_MARGIN":
+        if enriched_manifest.status not in ("REJECTED_LOW_MARGIN", "STATUS_LOT_ONLY"):
             # Route to listing_pipeline for draft generation
             ch.queue_declare(queue="listing_pipeline_v2", durable=True)
             ch.basic_publish(
@@ -88,7 +84,7 @@ def handle_task(ch, method, properties, body):
                 properties=pika.BasicProperties(delivery_mode=2)
             )
         else:
-            print(f" [x] Item rejected: {enriched_manifest.status}")
+            print(f" [x] Item rejected or lotted: {enriched_manifest.status}")
         
         ch.basic_ack(delivery_tag=method.delivery_tag)
     except Exception as e:
