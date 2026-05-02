@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: media-pipeline-rabbitmq
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - pipeline_network
+
+  postgres:
+    image: postgres:15
+    container_name: media-pipeline-postgres
+    environment:
+      POSTGRES_DB: media_pipeline
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: pipeline_secret
+    ports:
+      - "5433:5432" # Shifted to 5433 to avoid conflicts
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d media_pipeline"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pipeline_network
+
+  redis:
+    image: redis:alpine
+    container_name: media-pipeline-redis
+    ports:
+      - "6380:6379"
+    networks:
+      - pipeline_network
+
+networks:
+  pipeline_network:
+    driver: bridge
+
+volumes:
+  pg_data:
