@@ -1,0 +1,6 @@
+[
+  { "sku": "TEST-SKU-001", "title": "Test Item One", "price": 19.99 },
+  { "sku": "TEST-SKU-002", "title": "Test Item Two", "price": 29.99 },
+  { "sku": "TEST-SKU-001", "title": "Test Item One Duplicate", "price": 19.99 },
+  { "sku": "", "title": "Invalid Item", "price": "bad" }
+]

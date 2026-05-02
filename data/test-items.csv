@@ -1,0 +1,5 @@
+sku,title,price
+TEST-SKU-003,Test Item Three,39.99
+TEST-SKU-004,Test Item Four,49.99
+TEST-SKU-003,Duplicate Item Three,39.99
+,Invalid Row,not-a-number
