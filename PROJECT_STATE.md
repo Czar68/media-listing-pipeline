@@ -1,9 +1,9 @@
 # PROJECT STATE
 
-Status: PHASE_4_COMPLETE
+Status: PHASE_6_IN_PROGRESS
 
 Current Phase:
-PHASE_04_IDENTITY_APPLICATION
+PHASE_06_FINANCIAL_LOGIC
 
 Approved Next Phase:
 TBD (not yet selected in this repo)
@@ -256,3 +256,12 @@ PHASE_04 — identity-application
 ## EBAY SCANNER V1 — PHASE 1 (2026-04-17)
 
 **Append-only note:** Added `scripts/ebay-scanner-v1.js` as single-item deterministic listing compiler (Production Core). Operational baseline established.
+## AI_BROKER_AND_INFRASTRUCTURE_ADOPTION (2026-05-02)
+
+**Append-only note:** Established the foundational AI broker worker and unified infrastructure. Created `core/ai_broker/identity_worker.py` with RabbitMQ integration and Pydantic-based manifest processing. Standardized `infrastructure/docker/docker-compose.yml` with RabbitMQ, Postgres, and Redis services including healthchecks and network isolation. Ensured python package integrity by creating `__init__.py` files across `adapters`, `api`, `auth`, `data`, and `core/financials`.
+
+---
+
+## PHASE_06_FINANCIAL_LOGIC (2026-05-02)
+
+**Append-only note:** Phase started. Implemented deterministic financial calculation module `core/financials/calculator.py` with formulas for eBay fees, standard shipping, and net profit. Created `core/ai_broker/financial_worker.py` to listen on the `financial_pipeline` RabbitMQ queue, enrich manifests with calculated financials, and route items to `ready_for_listing` or `flagged_for_review` based on a $2.00 profit threshold.
