@@ -5,6 +5,7 @@ def get_disc_only_description(title: str) -> str:
     """
     return (
         f"Item: {title}\n\n"
+        "BUNDLE SPECIAL: Add any 3 replacement discs to your cart for an automatic 20% discount. One flat shipping rate applies to all items!\n\n"
         "Condition Details:\n"
         "- Authentic original release\n"
         "- Loose Disc (Disc Only - No Case, No Artwork, No Manual)\n"
