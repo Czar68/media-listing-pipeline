@@ -12,68 +12,74 @@ if ROOT_DIR not in sys.path:
 
 try:
     from core.ingestor.schema import Manifest
-    from core.financials.calculator import calculate_financials
-    print(" [v] Success: Manifest schema and calculator imported.")
+    from core.listing_engine.templates import get_disc_only_description
+    from core.listing_engine.seo_optimiser import generate_ebay_title
+    print(" [v] Success: Modules imported.")
 except ImportError as e:
     print(f" [!] Import Error: {e}")
     raise
 
 # Configuration from environment
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
-RABBITMQ_QUEUE = "financial_pipeline_v2"
+RABBITMQ_QUEUE = "listing_pipeline_v2"
+DRAFTS_DIR = os.path.join(ROOT_DIR, "data", "drafts")
 
-def process_financials(manifest: Manifest) -> Manifest:
+# Ensure drafts directory exists
+os.makedirs(DRAFTS_DIR, exist_ok=True)
+
+def process_listing(manifest: Manifest) -> dict:
     """
-    Process financial calculations for the manifest.
+    Hydrates the manifest with listing data and generates a draft.
     """
-    print(f" [*] Processing Financials for Transaction: {manifest.transaction_id}")
+    print(f" [*] Processing Listing Draft for Transaction: {manifest.transaction_id}")
     
-    # Extract listing_price and acquisition_cost from the manifest if available.
-    # Defaulting to 0.0 if not present.
-    listing_price = manifest.financials.get("listing_price", 0.0)
-    acquisition_cost = manifest.financials.get("acquisition_cost", 0.0)
+    # Hydrate manifest fields
+    manifest.identity["ebay_category_id"] = 617
     
-    # Calculate financials
-    updated_financials = calculate_financials(listing_price, acquisition_cost)
+    title = manifest.identity.get("title") or "Unknown Title"
     
-    # Update manifest financials
-    manifest.financials.update(updated_financials)
+    # Generate SEO Title
+    ebay_title = generate_ebay_title(title=title)
     
-    # Business logic for listing status
-    net_profit = updated_financials.get("net_profit", 0.0)
-    if net_profit > 2.00:
-        if not manifest.flags.get("human_review_required"):
-            manifest.status = "ready_for_listing"
-        else:
-            manifest.status = "flagged_for_review"
+    # Generate Description
+    ebay_description = get_disc_only_description(title=title)
+    
+    # Determine Status
+    if manifest.flags.get("human_review_required"):
+        draft_status = "DRAFT_PENDING_APPROVAL"
     else:
-        manifest.status = "flagged_for_review"
-        manifest.flags["human_review_required"] = True
+        draft_status = "READY_TO_PUBLISH"
         
-    return manifest
+    draft = {
+        "transaction_id": manifest.transaction_id,
+        "draft_status": draft_status,
+        "ebay_category_id": 617,
+        "title": ebay_title,
+        "description": ebay_description,
+        "financials": manifest.financials,
+        "source_manifest": manifest.model_dump()
+    }
+    
+    # Generate draft_listing.json
+    draft_filename = f"{manifest.transaction_id}.json"
+    draft_filepath = os.path.join(DRAFTS_DIR, draft_filename)
+    
+    with open(draft_filepath, "w") as f:
+        json.dump(draft, f, indent=2)
+        
+    print(f" [v] Draft saved to: {draft_filepath}")
+    return draft
 
 def handle_task(ch, method, properties, body):
     try:
         data = json.loads(body)
         manifest = Manifest(**data)
         
-        enriched_manifest = process_financials(manifest)
-        
-        print(f" [v] Result: {enriched_manifest.model_dump_json()}")
-        
-        # Route to listing_pipeline for draft generation
-        ch.queue_declare(queue="listing_pipeline_v2", durable=True)
-        ch.basic_publish(
-            exchange='',
-            routing_key="listing_pipeline_v2",
-            body=enriched_manifest.model_dump_json(),
-            properties=pika.BasicProperties(delivery_mode=2)
-        )
+        draft = process_listing(manifest)
         
         ch.basic_ack(delivery_tag=method.delivery_tag)
     except Exception as e:
         print(f" [!] Error processing message: {e}")
-        # Reject and don't requeue to avoid infinite loops on bad data
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
 def start_worker():
@@ -98,7 +104,7 @@ def start_worker():
     channel.basic_qos(prefetch_count=1)
     channel.basic_consume(queue=RABBITMQ_QUEUE, on_message_callback=handle_task)
 
-    print(f" [*] Financial Worker started on queue '{RABBITMQ_QUEUE}'. Waiting for messages...")
+    print(f" [*] Listing Worker started on queue '{RABBITMQ_QUEUE}'. Waiting for messages...")
     try:
         channel.start_consuming()
     except KeyboardInterrupt:

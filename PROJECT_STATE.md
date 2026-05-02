@@ -1,9 +1,9 @@
 # PROJECT STATE
 
-Status: PHASE_6_IN_PROGRESS
+Status: PHASE_11_IN_PROGRESS
 
 Current Phase:
-PHASE_06_FINANCIAL_LOGIC
+PHASE_11_BULK_STRESS_TESTING
 
 Approved Next Phase:
 TBD (not yet selected in this repo)
@@ -265,3 +265,35 @@ PHASE_04 — identity-application
 ## PHASE_06_FINANCIAL_LOGIC (2026-05-02)
 
 **Append-only note:** Phase started. Implemented deterministic financial calculation module `core/financials/calculator.py` with formulas for eBay fees, standard shipping, and net profit. Created `core/ai_broker/financial_worker.py` to listen on the `financial_pipeline` RabbitMQ queue, enrich manifests with calculated financials, and route items to `ready_for_listing` or `flagged_for_review` based on a $2.00 profit threshold.
+
+**Append-only note:** Phase 6 verification complete. Authored `tests/test_financials.py` and converted calculator logic to use the `decimal` module to eliminate floating-point imprecision. Tests passing for standard profit calculation and loss-leader worker flagging. Additionally, configured database seeding with `infrastructure/docker/seeds/init_pricing.sql` and mounted to the Postgres container via `docker-compose.yml`.
+
+---
+
+## PHASE_07_FORENSIC_OCR (2026-05-02)
+
+**Append-only note:** Phase started. Implemented the Forensic OCR Layer. Created `core/ai_broker/ocr_engine.py` with the `DiscScanner` class configured for Vertex AI/Gemini extraction of Matrix/Hub Codes and Copyright Text. Updated `core/ai_broker/identity_worker.py` to route manifests pending forensic OCR to the scanner and log extracted codes. Instantiated the UPC bridge with a mocked `lookup_by_hub_code` function in `core/adapters/upc_oracle.py` to prepare for legacy scanner integration.
+
+---
+
+## PHASE_08_PIPELINE_INTEGRATION (2026-05-02)
+
+**Append-only note:** Phase started. Wired the Forensic OCR extraction to the UPC Oracle. Created local mapping database `data/hub_mappings.json` for deterministic checks. Refactored `lookup_by_hub_code` to simulate database lookup. Updated `identity_worker` to parse hub matches, hydrate UPC/Title attributes in the manifest, and successfully advance the pipeline status to `pending_financial_evaluation`. Created `scripts/test_pipeline_run.py` and executed the integration test over RabbitMQ.
+
+---
+
+## PHASE_09_FULL_PIPELINE_VALIDATION (2026-05-02)
+
+**Append-only note:** Phase complete. Completed the Financial Evaluation Loop by executing `identity_worker` and `financial_worker` concurrently via RabbitMQ. Updated `test_pipeline_run.py` to inject a $10.00 DVD mock manifest, wait on the `final_results` queue, and assert the output logic. Verified exact calculated profit ($2.95) and strict assertion that `human_review_required` is `False`. Cleaned up queues. The media listing pipeline is operational from OCR injection to final financial routing.
+
+---
+
+## PHASE_10_LISTING_ENGINE_DRAFTING (2026-05-02)
+
+**Append-only note:** Phase started. Implemented the eBay Listing Drafting Engine. Created `core/listing_engine/templates.py` with standard constraints ("Authentic", "Loose Disc", "Untested/Scratched Surface") for Disc Only media. Created `core/listing_engine/seo_optimiser.py` to compile highly optimized 80-character titles. Created `core/ai_broker/listing_worker.py` to consume from `listing_pipeline`, hydrate manifestations with `ebay_category_id: 617`, and emit a `draft_listing.json` payload locally. Updated `financial_worker.py` to advance pipeline to `listing_pipeline`.
+
+---
+
+## PHASE_11_BULK_STRESS_TESTING (2026-05-02)
+
+**Append-only note:** Phase started. Implemented Bulk Pipeline Injection and Draft Validation. Added `scripts/bulk_test_injection.py` to blast 5 unique manifests concurrently with valid and invalid Hub Codes to test the `human_review` gate. Added `scripts/check_drafts.py` to parse `data/drafts/` and print a summary verification table. Validated concurrency logic for no file-write collisions by scaling the drafts out by UUID-based filenames.
