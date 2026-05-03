@@ -16,7 +16,8 @@ try:
     from core.ai_broker.ocr_engine import DiscScanner
     from core.adapters.upc_oracle import lookup_by_hub_code
     from core.logic.domain_config import get_domain_config
-    print(" [v] Success: Manifest schema, DiscScanner, upc_oracle, and domain_config imported.")
+    from core.ai_broker.connection import connect_with_retry
+    print(" [v] Success: Manifest schema, DiscScanner, upc_oracle, domain_config, connection imported.")
 except ImportError as e:
     print(f" [!] Import Error: {e}")
     # Fallback to local import if needed or raise
@@ -113,21 +114,7 @@ def handle_task(ch, method, properties, body):
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
 def start_worker():
-    print(f" [*] Connecting to RabbitMQ at {RABBITMQ_HOST}...")
-    
-    connection = None
-    retry_count = 0
-    while not connection and retry_count < 10:
-        try:
-            connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
-        except pika.exceptions.AMQPConnectionError:
-            retry_count += 1
-            print(f" [!] Connection failed. Retry {retry_count}/10 in 5s...")
-            time.sleep(5)
-
-    if not connection:
-        print(" [!!!] Could not connect to RabbitMQ. Exiting.")
-        sys.exit(1)
+    connection = connect_with_retry(RABBITMQ_HOST, "IdentityWorker")
 
     channel = connection.channel()
     channel.queue_declare(queue=RABBITMQ_QUEUE, durable=True)

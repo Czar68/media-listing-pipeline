@@ -14,7 +14,8 @@ try:
     from core.ingestor.schema import Manifest
     from core.financials.calculator import calculate_financials
     from core.adapters.pricing_oracle import PricingOracle
-    print(" [v] Success: Manifest schema, calculator, and pricing oracle imported.")
+    from core.ai_broker.connection import connect_with_retry
+    print(" [v] Success: Manifest schema, calculator, pricing oracle, and connection imported.")
 except ImportError as e:
     print(f" [!] Import Error: {e}")
     raise
@@ -93,21 +94,7 @@ def handle_task(ch, method, properties, body):
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
 def start_worker():
-    print(f" [*] Connecting to RabbitMQ at {RABBITMQ_HOST}...")
-    
-    connection = None
-    retry_count = 0
-    while not connection and retry_count < 10:
-        try:
-            connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
-        except pika.exceptions.AMQPConnectionError:
-            retry_count += 1
-            print(f" [!] Connection failed. Retry {retry_count}/10 in 5s...")
-            time.sleep(5)
-
-    if not connection:
-        print(" [!!!] Could not connect to RabbitMQ. Exiting.")
-        sys.exit(1)
+    connection = connect_with_retry(RABBITMQ_HOST, "FinancialWorker")
 
     channel = connection.channel()
     channel.queue_declare(queue=RABBITMQ_QUEUE, durable=True)

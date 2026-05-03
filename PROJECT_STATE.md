@@ -1,6 +1,6 @@
 # PROJECT STATE
 
-Status: PHASE_18_IN_PROGRESS
+Status: PHASE_18_DNS_REPAIR
 
 Current Phase:
 PHASE_18_INCLUDED_PRO_ACTIVATION
@@ -345,3 +345,9 @@ PHASE_04 — identity-application
 ## PHASE_18_INCLUDED_PRO_ACTIVATION (2026-05-02)
 
 **Append-only note:** Phase started. Updated core/logic/domain_config.py to set listing_model to gemini-1.5-pro (primary listing writer) and ocr_model to gemini-1.5-flash for both MOVIES and GAMES domains. Updated core/ai_broker/listing_worker.py to implement generate_pro_description() with Gemini 1.5 Pro as primary (GOOGLE_API_KEY via google-generativeai SDK) and a mock-fallback. Added a commented-out DeepSeek-Claude Bridge block using the Anthropic SDK pointed at DEEPSEEK_BASE_URL for Anthropic-compatible responses. Added DEEPSEEK_API_KEY and DEEPSEEK_BASE_URL to .env. Updated OCR_MODEL and LISTING_MODEL comment references in .env from Phase 17 values to Phase 18 values.
+
+---
+
+## PHASE_18_DNS_REPAIR (2026-05-03)
+
+**Append-only note:** Diagnosed and repaired Docker networking GAIERROR. Root cause: pika retry loops only caught pika.exceptions.AMQPConnectionError. During startup, Docker raises socket.gaierror (DNS not yet resolved) which is an OSError subclass, bypassing the retry entirely and crashing workers. Fix: Created core/ai_broker/connection.py as a shared resilient helper catching socket.gaierror, ConnectionRefusedError, AMQPConnectionError, and OSError with capped exponential backoff (5s->10s->15s cap, 15 retries). Wired into identity_worker.py, financial_worker.py, listing_worker.py. Hardened docker-compose.yml with start_period on all healthchecks, working_dir guards, explicit POSTGRES_HOST, and inline environment taking priority over env_file for hostname keys.

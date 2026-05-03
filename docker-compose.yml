@@ -2,6 +2,9 @@ version: '3.8'
 
 services:
   # ── The Messaging Hub ──────────────────────────────────────────────────────
+  # DNS resolution rule: workers MUST reference the SERVICE NAME "rabbitmq",
+  # not the container_name "pipeline_broker". Docker's embedded DNS resolves
+  # service names, not container names, across user-defined bridge networks.
   rabbitmq:
     image: rabbitmq:3-management
     container_name: pipeline_broker
@@ -12,7 +15,8 @@ services:
       test: ["CMD", "rabbitmq-diagnostics", "check_running"]
       interval: 15s
       timeout: 10s
-      retries: 5
+      retries: 8
+      start_period: 20s    # give RabbitMQ time to boot before first check
     restart: always
     networks:
       - pipeline_network
@@ -34,22 +38,26 @@ services:
       test: ["CMD-SHELL", "pg_isready -U admin -d media_pipeline"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 8
+      start_period: 15s    # give Postgres time to init before first check
     restart: always
     networks:
       - pipeline_network
 
   # ── Worker 1: Identity (Who is this disc?) ─────────────────────────────────
-  # OCR engine: gemini-3-flash   (set in domain_config.py, routed via ACTIVE_DOMAIN)
   identity_worker:
     build: .
     container_name: worker_identity
     command: python core/ai_broker/identity_worker.py
-    env_file: .env                          # ← live reload ACTIVE_DOMAIN without rebuild
+    working_dir: /app                       # explicit WORKDIR guard
+    env_file: .env                          # loads ACTIVE_DOMAIN etc.
     volumes:
-      - .:/app                              # source + .env mounted; restart worker to pick up changes
+      - .:/app
     environment:
+      # Inline environment ALWAYS wins over env_file for the same key.
+      # Use service names (not container_name) for Docker DNS resolution.
       - RABBITMQ_HOST=rabbitmq
+      - POSTGRES_HOST=postgres
       - DATABASE_URL=postgresql://admin:pipeline_secret@postgres:5432/media_pipeline
     depends_on:
       rabbitmq:
@@ -65,11 +73,13 @@ services:
     build: .
     container_name: worker_finance
     command: python core/ai_broker/financial_worker.py
+    working_dir: /app
     env_file: .env
     volumes:
       - .:/app
     environment:
       - RABBITMQ_HOST=rabbitmq
+      - POSTGRES_HOST=postgres
       - DATABASE_URL=postgresql://admin:pipeline_secret@postgres:5432/media_pipeline
     depends_on:
       rabbitmq:
@@ -81,16 +91,17 @@ services:
       - pipeline_network
 
   # ── Worker 3: Listing (Write the eBay draft) ───────────────────────────────
-  # Description model: claude-3-5-sonnet-20240620  (set in domain_config.py)
   listing_worker:
     build: .
     container_name: worker_listing
     command: python core/ai_broker/listing_worker.py
+    working_dir: /app
     env_file: .env
     volumes:
       - .:/app
     environment:
       - RABBITMQ_HOST=rabbitmq
+      - POSTGRES_HOST=postgres
       - DATABASE_URL=postgresql://admin:pipeline_secret@postgres:5432/media_pipeline
       - EBAY_PRODUCTION=false
     depends_on:
@@ -105,6 +116,7 @@ services:
     build: .
     container_name: monitor_watcher
     command: python scripts/ingress_monitor.py
+    working_dir: /app
     env_file: .env
     volumes:
       - .:/app
@@ -117,7 +129,10 @@ services:
     networks:
       - pipeline_network
 
-# ── Shared Network ─────────────────────────────────────────────────────────
+# ── Shared User-Defined Bridge Network ─────────────────────────────────────
+# A named user-defined bridge is REQUIRED for Docker's embedded DNS to
+# resolve service names between containers. The default bridge network does
+# NOT provide automatic DNS on all Docker/WSL2 configurations.
 networks:
   pipeline_network:
     driver: bridge

@@ -15,6 +15,7 @@ try:
     from core.listing_engine.templates import get_disc_only_description
     from core.listing_engine.seo_optimiser import generate_ebay_title, generate_sku
     from core.logic.domain_config import get_domain_config
+    from core.ai_broker.connection import connect_with_retry
     print(" [v] Success: Modules imported.")
 except ImportError as e:
     print(f" [!] Import Error: {e}")
@@ -171,21 +172,7 @@ def handle_task(ch, method, properties, body):
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
 def start_worker():
-    print(f" [*] Connecting to RabbitMQ at {RABBITMQ_HOST}...")
-    
-    connection = None
-    retry_count = 0
-    while not connection and retry_count < 10:
-        try:
-            connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
-        except pika.exceptions.AMQPConnectionError:
-            retry_count += 1
-            print(f" [!] Connection failed. Retry {retry_count}/10 in 5s...")
-            time.sleep(5)
-
-    if not connection:
-        print(" [!!!] Could not connect to RabbitMQ. Exiting.")
-        sys.exit(1)
+    connection = connect_with_retry(RABBITMQ_HOST, "ListingWorker")
 
     channel = connection.channel()
     channel.queue_declare(queue=RABBITMQ_QUEUE, durable=True)
