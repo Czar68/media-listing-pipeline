@@ -135,6 +135,29 @@ services:
     networks:
       - pipeline_network
 
+  # ── Worker 5: Ingress Orchestrator v3 (Disc-Only Video Games) ─────────────
+  # Replaces ingress_monitor for marathon scanning sessions.
+  # Sweeps raw/ and ingress/ on startup, then watches ingress/ live.
+  ingress_orchestrator_v3:
+    build: .
+    container_name: orchestrator_v3
+    command: python scripts/ingress_orchestrator_v3.py
+    working_dir: /app
+    env_file: .env
+    volumes:
+      - .:/app
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_QUEUE=manifest_pipeline_v2
+      - INGRESS_DIR=/app/data/ingress
+      - RAW_DIR=/app/data/storage/raw
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - pipeline_network
+
 # ── Shared User-Defined Bridge Network ─────────────────────────────────────
 # A named user-defined bridge is REQUIRED for Docker's embedded DNS to
 # resolve service names between containers. The default bridge network does

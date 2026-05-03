@@ -29,4 +29,7 @@ __pycache__/
 Thumbs.db
 
 # ── Data Dirs (runtime, not source) ───────────────────────────────────────────
+# Exclude all runtime data. data/ingress/ and data/storage/ are volume-mounted.
+# data/drafts/ is also excluded at the code level in ingress_orchestrator_v3.py.
 data/*
+data/drafts/
