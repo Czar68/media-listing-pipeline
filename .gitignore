@@ -1,8 +1,32 @@
+# ── Dependencies ──────────────────────────────────────────────────────────────
 node_modules/
-dist/
-*.tsbuildinfo
-artifacts/
+/node_modules/
+.venv/
+venv/
 
+# ── Build Outputs ─────────────────────────────────────────────────────────────
+dist/
+/dist/
+artifacts/
+out/
+*.tsbuildinfo
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+
+# ── Secrets & Config ──────────────────────────────────────────────────────────
+# .env.example is intentionally tracked (template only — no secrets).
+# All populated .env files are excluded.
 .env
 .env.*
-!.env.example
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+
+# ── OS Noise ──────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Data Dirs (runtime, not source) ───────────────────────────────────────────
+data/*
