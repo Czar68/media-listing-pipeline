@@ -1,9 +1,9 @@
 # PROJECT STATE
 
-Status: PHASE_15_IN_PROGRESS
+Status: PHASE_16_IN_PROGRESS
 
 Current Phase:
-PHASE_15_IMAGE_INGESTION_MONITOR
+PHASE_16_PRODUCTION_LAUNCH
 
 Approved Next Phase:
 TBD (not yet selected in this repo)
@@ -300,24 +300,36 @@ PHASE_04 — identity-application
 
 ---
 
-## PHASE_15_IMAGE_INGESTION_MONITOR (2026-05-02)
+## PHASE_16_PRODUCTION_LAUNCH (2026-05-02)
 
 **Append-only note:** Phase started. Implemented the eBay Inventory Mapping Bridge. Updated `core/listing_engine/seo_optimiser.py` to generate inventory SKUs based on hub codes. Created `core/adapters/ebay_client.py` using the 2026 Inventory Mapping API with a `dry_run` mock mode. Updated `core/ai_broker/listing_worker.py` to route ready drafts to a `sync_pipeline` queue for final sync processing.
 
 ---
 
-## PHASE_15_IMAGE_INGESTION_MONITOR (2026-05-02)
+## PHASE_16_PRODUCTION_LAUNCH (2026-05-02)
 
 **Append-only note:** Phase started. Implemented the Dynamic Pricing Oracle with core/adapters/pricing_oracle.py querying the market_values table. Updated core/ai_broker/financial_worker.py to look up prices before calculation, handle nulls with a default 9.99 pricing/human review flag, and instituted a profit floor routing to reject low margin items.
 
 ---
 
-## PHASE_15_IMAGE_INGESTION_MONITOR (2026-05-02)
+## PHASE_16_PRODUCTION_LAUNCH (2026-05-02)
 
 **Append-only note:** Phase started. Implemented Volume-Discount Logic and Master Dashboard. Updated core/listing_engine/templates.py with a Bundle & Save banner. Added apply_promotional_settings() to core/adapters/ebay_client.py for VOLUME_PLAY items. Created scripts/master_inventory_summary.py to output the 5,000-Disc Portfolio Projection from market_values and drafts. Archived historical logs into logs/archive/.
 
 ---
 
-## PHASE_15_IMAGE_INGESTION_MONITOR (2026-05-02)
+## PHASE_16_PRODUCTION_LAUNCH (2026-05-02)
 
 **Append-only note:** Phase started. Implemented the Image Ingestion Pipeline and S3 Bridge. Created scripts/ingress_monitor.py using watchdog to monitor data/ingress for new images and route them to RabbitMQ. Created core/adapters/s3_client.py for mock S3 uploading to yield public URLs for eBay. Created scripts/master_dashboard.py to generate a Markdown table of identified discs. Updated core/ai_broker/financial_worker.py to flag low margin (<.00 profit) items as STATUS_LOT_ONLY.
+
+---
+
+## PHASE_16_PRODUCTION_LAUNCH (2026-05-02)
+
+**Append-only note:** Phase started. Implemented the Live eBay Publisher and Production Launch. Updated core/adapters/ebay_client.py to toggle dry_run via EBAY_PRODUCTION env variable and mock the HTTP 201 response. Created scripts/publish_to_ebay.py to filter READY_TO_PUBLISH drafts, execute creation via EbayClient, save ebay_listing_id into the manifest, and move the json payload to data/storage/published/ (enforcing a --limit 5 safety gate). Added the Live URL column to scripts/master_dashboard.py utilizing the listing IDs.
+
+---
+
+## PHASE_16_PRODUCTION_LAUNCH (2026-05-02)
+
+**Append-only note:** Phase complete. Implemented the Live eBay Publisher and Production Launch. Created scripts/publish_to_ebay.py to filter READY_TO_PUBLISH drafts, invoke EbayClient, persist ebay_listing_id into the manifest JSON, and archive published items to data/storage/published/ with a --limit safety gate. Updated core/adapters/ebay_client.py to toggle dry_run via EBAY_PRODUCTION env var and correctly handle the mock HTTP 201 response. Updated scripts/master_dashboard.py to include a Live URL column. Created repo-root docker-compose.yml with all four workers (identity, financial, listing, ingress_monitor), Postgres, and RabbitMQ wired via healthchecks. Added Dockerfile and requirements.txt for the Python worker image.

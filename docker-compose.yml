@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  # ── The Messaging Hub ──────────────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: pipeline_broker
+    ports:
+      - "5672:5672"     # Messaging port
+      - "15672:15672"   # Dashboard port (http://localhost:15672)
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    restart: always
+    networks:
+      - pipeline_network
+
+  # ── Persistent Storage ─────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15
+    container_name: pipeline_postgres
+    environment:
+      POSTGRES_DB: media_pipeline
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: pipeline_secret
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/seeds:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d media_pipeline"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - pipeline_network
+
+  # ── Worker 1: Identity (Who is this disc?) ─────────────────────────────────
+  identity_worker:
+    build: .
+    container_name: worker_identity
+    command: python core/ai_broker/identity_worker.py
+    volumes:
+      - .:/app
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - DATABASE_URL=postgresql://admin:pipeline_secret@postgres:5432/media_pipeline
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - pipeline_network
+
+  # ── Worker 2: Financials (Is it profitable?) ───────────────────────────────
+  financial_worker:
+    build: .
+    container_name: worker_finance
+    command: python core/ai_broker/financial_worker.py
+    volumes:
+      - .:/app
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - DATABASE_URL=postgresql://admin:pipeline_secret@postgres:5432/media_pipeline
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - pipeline_network
+
+  # ── Worker 3: Listing (Write the eBay draft) ───────────────────────────────
+  listing_worker:
+    build: .
+    container_name: worker_listing
+    command: python core/ai_broker/listing_worker.py
+    volumes:
+      - .:/app
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - DATABASE_URL=postgresql://admin:pipeline_secret@postgres:5432/media_pipeline
+      - EBAY_PRODUCTION=false
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - pipeline_network
+
+  # ── Worker 4: Ingress (The Watcher) ───────────────────────────────────────
+  ingress_monitor:
+    build: .
+    container_name: monitor_watcher
+    command: python scripts/ingress_monitor.py
+    volumes:
+      - .:/app
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - pipeline_network
+
+# ── Shared Network ─────────────────────────────────────────────────────────
+networks:
+  pipeline_network:
+    driver: bridge
+
+# ── Named Volumes ──────────────────────────────────────────────────────────
+volumes:
+  pg_data:

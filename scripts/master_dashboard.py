@@ -5,8 +5,8 @@ DRAFTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data
 
 def generate_dashboard():
     dashboard_lines = [
-        "| SKU | Title | Suggested Price | Est. Profit | Market Demand |",
-        "|-----|-------|-----------------|-------------|---------------|"
+        "| SKU | Title | Suggested Price | Est. Profit | Market Demand | Live URL |",
+        "|-----|-------|-----------------|-------------|---------------|----------|"
     ]
     
     if os.path.exists(DRAFTS_DIR):
@@ -25,7 +25,10 @@ def generate_dashboard():
                         
                         demand = "High" if price > 15.0 else "Low"
                         
-                        dashboard_lines.append(f"| {sku} | {title} | ${price:.2f} | ${profit:.2f} | {demand} |")
+                        ebay_listing_id = draft.get("ebay_listing_id", "")
+                        live_url = f"https://www.ebay.com/itm/{ebay_listing_id}" if ebay_listing_id else "N/A"
+                        
+                        dashboard_lines.append(f"| {sku} | {title} | ${price:.2f} | ${profit:.2f} | {demand} | {live_url} |")
                     except Exception as e:
                         pass
                         
