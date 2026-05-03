@@ -40,12 +40,14 @@ services:
       - pipeline_network
 
   # ── Worker 1: Identity (Who is this disc?) ─────────────────────────────────
+  # OCR engine: gemini-3-flash   (set in domain_config.py, routed via ACTIVE_DOMAIN)
   identity_worker:
     build: .
     container_name: worker_identity
     command: python core/ai_broker/identity_worker.py
+    env_file: .env                          # ← live reload ACTIVE_DOMAIN without rebuild
     volumes:
-      - .:/app
+      - .:/app                              # source + .env mounted; restart worker to pick up changes
     environment:
       - RABBITMQ_HOST=rabbitmq
       - DATABASE_URL=postgresql://admin:pipeline_secret@postgres:5432/media_pipeline
@@ -63,6 +65,7 @@ services:
     build: .
     container_name: worker_finance
     command: python core/ai_broker/financial_worker.py
+    env_file: .env
     volumes:
       - .:/app
     environment:
@@ -78,10 +81,12 @@ services:
       - pipeline_network
 
   # ── Worker 3: Listing (Write the eBay draft) ───────────────────────────────
+  # Description model: claude-3-5-sonnet-20240620  (set in domain_config.py)
   listing_worker:
     build: .
     container_name: worker_listing
     command: python core/ai_broker/listing_worker.py
+    env_file: .env
     volumes:
       - .:/app
     environment:
@@ -100,6 +105,7 @@ services:
     build: .
     container_name: monitor_watcher
     command: python scripts/ingress_monitor.py
+    env_file: .env
     volumes:
       - .:/app
     environment:

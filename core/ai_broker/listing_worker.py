@@ -14,6 +14,7 @@ try:
     from core.ingestor.schema import Manifest
     from core.listing_engine.templates import get_disc_only_description
     from core.listing_engine.seo_optimiser import generate_ebay_title, generate_sku
+    from core.logic.domain_config import get_domain_config
     print(" [v] Success: Modules imported.")
 except ImportError as e:
     print(f" [!] Import Error: {e}")
@@ -24,8 +25,43 @@ RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
 RABBITMQ_QUEUE = "listing_pipeline_v2"
 DRAFTS_DIR = os.path.join(ROOT_DIR, "data", "drafts")
 
+# Load domain config once on startup
+DOMAIN_CONFIG = get_domain_config()
+LISTING_MODEL = DOMAIN_CONFIG["listing_model"]   # claude-3-5-sonnet-20240620
+
 # Ensure drafts directory exists
 os.makedirs(DRAFTS_DIR, exist_ok=True)
+
+
+def generate_sonnet_description(title: str, domain: str) -> str:
+    """
+    Calls Claude 3.5 Sonnet (LISTING_MODEL) to generate high-converting eBay copy.
+    In production this will use the Anthropic Messages API; currently returns a
+    rich mock so the full pipeline can run without credentials.
+    """
+    print(f" [{LISTING_MODEL}] Generating SEO description for: {title} (domain: {domain})")
+
+    # --- Production hook (uncomment when ANTHROPIC_API_KEY is set) ----------
+    # import anthropic
+    # client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    # msg = client.messages.create(
+    #     model=LISTING_MODEL,
+    #     max_tokens=512,
+    #     messages=[{
+    #         "role": "user",
+    #         "content": f"Write a high-converting eBay listing description for a {domain} disc: {title}."
+    #     }]
+    # )
+    # return msg.content[0].text
+    # -------------------------------------------------------------------------
+
+    # Mock: merge the static template with a Sonnet-style opener
+    base = get_disc_only_description(title=title)
+    sonnet_opener = (
+        f"✅ AUTHENTIC | {title}\n"
+        f"Professionally verified replacement disc — ships same business day.\n\n"
+    )
+    return sonnet_opener + base
 
 def process_listing(manifest: Manifest) -> dict:
     """
@@ -44,8 +80,8 @@ def process_listing(manifest: Manifest) -> dict:
     # Generate SKU
     sku = generate_sku(manifest.raw_identifier)
     
-    # Generate Description
-    ebay_description = get_disc_only_description(title=title)
+    # Generate Description via Claude 3.5 Sonnet
+    ebay_description = generate_sonnet_description(title=title, domain=DOMAIN_CONFIG["domain"])
     
     # Determine Status
     if manifest.flags.get("human_review_required"):

@@ -4,7 +4,6 @@ import sys
 import os
 import time
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 # Ensure the root directory is in sys.path for absolute imports
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -16,7 +15,8 @@ try:
     from core.ingestor.schema import Manifest
     from core.ai_broker.ocr_engine import DiscScanner
     from core.adapters.upc_oracle import lookup_by_hub_code
-    print(" [v] Success: Manifest schema, DiscScanner, and upc_oracle imported.")
+    from core.logic.domain_config import get_domain_config
+    print(" [v] Success: Manifest schema, DiscScanner, upc_oracle, and domain_config imported.")
 except ImportError as e:
     print(f" [!] Import Error: {e}")
     # Fallback to local import if needed or raise
@@ -27,11 +27,15 @@ RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
 RABBITMQ_QUEUE = "manifest_pipeline_v2"
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://admin:pipeline_secret@localhost:5433/media_pipeline")
 
+# Load domain config once on startup — workers read ACTIVE_DOMAIN from env
+DOMAIN_CONFIG = get_domain_config()
+
 def process_identity(manifest: Manifest) -> Manifest:
     """
     Processing logic for identity enrichment, including Forensic OCR.
+    Active domain: DOMAIN_CONFIG['domain'] (set via ACTIVE_DOMAIN env var).
     """
-    print(f" [*] Processing Identity for Transaction: {manifest.transaction_id}")
+    print(f" [*] Processing Identity for Transaction: {manifest.transaction_id} | domain: {DOMAIN_CONFIG['domain']}")
     
     if manifest.status == "pending_forensic_ocr":
         print(" [*] Initiating Forensic OCR...")
