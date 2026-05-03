@@ -351,3 +351,9 @@ PHASE_04 — identity-application
 ## PHASE_18_DNS_REPAIR (2026-05-03)
 
 **Append-only note:** Diagnosed and repaired Docker networking GAIERROR. Root cause: pika retry loops only caught pika.exceptions.AMQPConnectionError. During startup, Docker raises socket.gaierror (DNS not yet resolved) which is an OSError subclass, bypassing the retry entirely and crashing workers. Fix: Created core/ai_broker/connection.py as a shared resilient helper catching socket.gaierror, ConnectionRefusedError, AMQPConnectionError, and OSError with capped exponential backoff (5s->10s->15s cap, 15 retries). Wired into identity_worker.py, financial_worker.py, listing_worker.py. Hardened docker-compose.yml with start_period on all healthchecks, working_dir guards, explicit POSTGRES_HOST, and inline environment taking priority over env_file for hostname keys.
+
+---
+
+## PHASE_18_INGRESS_MONITOR_REPAIR (2026-05-03)
+
+**Append-only note:** Refactored scripts/ingress_monitor.py to fix silent hang and pathing mismatch. Added startup_scan() that drains pre-existing images from INGRESS_DIR before starting the watchdog observer. Set RABBITMQ_HOST default to rabbitmq (Docker service name). Added logging.basicConfig to stdout with timestamps. Replaced monolithic push-in-handler with shared process_file() used by both startup scan and live watchdog. Added INGRESS_DIR env var override so container uses /app/data/ingress from the volume mount. Updated docker-compose.yml ingress_monitor service to pass RABBITMQ_HOST=rabbitmq and INGRESS_DIR=/app/data/ingress explicitly. Fixed ASCII-safe log messages (removed Unicode arrow). Local validation confirmed 4 files correctly processed by startup_scan with mocked RabbitMQ.

@@ -121,7 +121,13 @@ services:
     volumes:
       - .:/app
     environment:
+      # RABBITMQ_HOST must be the Docker service name — ingress_monitor.py
+      # defaults to 'rabbitmq' but we make it explicit here.
       - RABBITMQ_HOST=rabbitmq
+      # INGRESS_DIR must point to the volume-mounted path inside the container.
+      # Without this, the script would build a path relative to its __file__
+      # location which may differ from the actual bind-mount target.
+      - INGRESS_DIR=/app/data/ingress
     depends_on:
       rabbitmq:
         condition: service_healthy
