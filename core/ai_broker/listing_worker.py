@@ -27,41 +27,79 @@ DRAFTS_DIR = os.path.join(ROOT_DIR, "data", "drafts")
 
 # Load domain config once on startup
 DOMAIN_CONFIG = get_domain_config()
-LISTING_MODEL = DOMAIN_CONFIG["listing_model"]   # claude-3-5-sonnet-20240620
+LISTING_MODEL = DOMAIN_CONFIG["listing_model"]   # gemini-1.5-pro
 
 # Ensure drafts directory exists
 os.makedirs(DRAFTS_DIR, exist_ok=True)
 
 
-def generate_sonnet_description(title: str, domain: str) -> str:
+def generate_pro_description(title: str, domain: str) -> str:
     """
-    Calls Claude 3.5 Sonnet (LISTING_MODEL) to generate high-converting eBay copy.
-    In production this will use the Anthropic Messages API; currently returns a
-    rich mock so the full pipeline can run without credentials.
-    """
-    print(f" [{LISTING_MODEL}] Generating SEO description for: {title} (domain: {domain})")
+    PRIMARY: Gemini 1.5 Pro via Google AI Studio (GOOGLE_API_KEY).
+    FALLBACK: Rich mock description so the pipeline runs without credentials.
 
-    # --- Production hook (uncomment when ANTHROPIC_API_KEY is set) ----------
+    DeepSeek-Claude Bridge (commented out below) is the secondary option:
+    it uses the Anthropic SDK pointed at the DeepSeek base URL, providing
+    Claude-compatible responses at lower cost.
+    """
+    print(f" [{LISTING_MODEL}] Generating SEO description for: '{title}' (domain: {domain})")
+
+    google_api_key = os.getenv("GOOGLE_API_KEY")
+
+    # ── PRIMARY: Gemini 1.5 Pro (Google AI Studio) ──────────────────────────
+    if google_api_key:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=google_api_key)
+            model = genai.GenerativeModel(LISTING_MODEL)
+            prompt = (
+                f"You are an expert eBay copywriter. Write a high-converting listing description "
+                f"for a {domain} replacement disc: '{title}'.\n"
+                f"Include: condition disclosure, authenticity statement, shipping assurance, "
+                f"and a bundle savings hook. Keep it under 300 words."
+            )
+            response = model.generate_content(prompt)
+            print(f" [{LISTING_MODEL}] Gemini Pro response received.")
+            return response.text
+        except Exception as e:
+            print(f" [{LISTING_MODEL}] Gemini Pro call failed: {e}. Using mock fallback.")
+
+    # ── DEEPSEEK-CLAUDE BRIDGE (commented out — activate with DEEPSEEK_API_KEY) ──
+    # Uses the Anthropic SDK but routes to DeepSeek's Anthropic-compatible endpoint.
+    # Uncomment when DEEPSEEK_API_KEY and DEEPSEEK_BASE_URL are set in .env.
+    #
     # import anthropic
-    # client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-    # msg = client.messages.create(
-    #     model=LISTING_MODEL,
-    #     max_tokens=512,
-    #     messages=[{
-    #         "role": "user",
-    #         "content": f"Write a high-converting eBay listing description for a {domain} disc: {title}."
-    #     }]
-    # )
-    # return msg.content[0].text
-    # -------------------------------------------------------------------------
+    # deepseek_key = os.getenv("DEEPSEEK_API_KEY")
+    # deepseek_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/anthropic")
+    # if deepseek_key:
+    #     try:
+    #         client = anthropic.Anthropic(
+    #             api_key=deepseek_key,
+    #             base_url=deepseek_url,
+    #         )
+    #         msg = client.messages.create(
+    #             model="deepseek-chat",
+    #             max_tokens=512,
+    #             messages=[{
+    #                 "role": "user",
+    #                 "content": (
+    #                     f"Write a high-converting eBay listing description for a "
+    #                     f"{domain} replacement disc: {title}."
+    #                 )
+    #             }]
+    #         )
+    #         return msg.content[0].text
+    #     except Exception as e:
+    #         print(f" [DeepSeek] Bridge call failed: {e}. Using mock fallback.")
+    # ─────────────────────────────────────────────────────────────────────────
 
-    # Mock: merge the static template with a Sonnet-style opener
+    # ── FALLBACK: rich mock (no credentials required) ────────────────────────
     base = get_disc_only_description(title=title)
-    sonnet_opener = (
+    opener = (
         f"✅ AUTHENTIC | {title}\n"
         f"Professionally verified replacement disc — ships same business day.\n\n"
     )
-    return sonnet_opener + base
+    return opener + base
 
 def process_listing(manifest: Manifest) -> dict:
     """
@@ -80,8 +118,8 @@ def process_listing(manifest: Manifest) -> dict:
     # Generate SKU
     sku = generate_sku(manifest.raw_identifier)
     
-    # Generate Description via Claude 3.5 Sonnet
-    ebay_description = generate_sonnet_description(title=title, domain=DOMAIN_CONFIG["domain"])
+    # Generate Description via Gemini 1.5 Pro (with DeepSeek bridge fallback)
+    ebay_description = generate_pro_description(title=title, domain=DOMAIN_CONFIG["domain"])
     
     # Determine Status
     if manifest.flags.get("human_review_required"):

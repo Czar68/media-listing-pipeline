@@ -4,6 +4,11 @@ domain_config.py — Multi-domain routing for the media listing pipeline.
 Reads ACTIVE_DOMAIN from the environment (.env injected via docker-compose env_file).
 Supported values: MOVIES (default) | GAMES
 
+Phase 18 model assignments:
+  OCR / visual identification : gemini-1.5-flash  (high-volume, cost-efficient)
+  Listing copy generation     : gemini-1.5-pro    (primary writer, AI Studio key)
+  DeepSeek-Claude bridge      : available in listing_worker.py (Anthropic-compatible API)
+
 Workers import `get_domain_config()` on startup; no rebuild needed to switch domains.
 """
 
@@ -22,7 +27,7 @@ class DomainConfig(TypedDict):
 # ── MOVIES ────────────────────────────────────────────────────────────────────
 _MOVIES_CONFIG: DomainConfig = {
     "domain": "MOVIES",
-    "ocr_model": "gemini-3-flash",
+    "ocr_model": "gemini-1.5-flash",
     "ocr_prompt": (
         "You are a forensic disc analyst specialising in DVD and Blu-ray media. "
         "Analyse the inner-ring area of the provided disc image. "
@@ -33,14 +38,14 @@ _MOVIES_CONFIG: DomainConfig = {
         "  • Copyright text\n"
         "Return a JSON object with keys: hub_code, studio, season_volume, copyright_text, confidence."
     ),
-    "listing_model": "claude-3-5-sonnet-20240620",
+    "listing_model": "gemini-1.5-pro",
     "identifier_label": "Hub Code",
 }
 
 # ── GAMES ─────────────────────────────────────────────────────────────────────
 _GAMES_CONFIG: DomainConfig = {
     "domain": "GAMES",
-    "ocr_model": "gemini-3-flash",
+    "ocr_model": "gemini-1.5-flash",
     "ocr_prompt": (
         "You are a forensic disc analyst specialising in PlayStation, Xbox, and Nintendo optical media. "
         "Analyse the disc label and inner-ring area of the provided image. "
@@ -54,7 +59,7 @@ _GAMES_CONFIG: DomainConfig = {
         "  • Copyright text\n"
         "Return a JSON object with keys: platform_code, region, rating, publisher, copyright_text, confidence."
     ),
-    "listing_model": "claude-3-5-sonnet-20240620",
+    "listing_model": "gemini-1.5-pro",
     "identifier_label": "Platform Code",
 }
 
