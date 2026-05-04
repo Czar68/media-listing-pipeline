@@ -3,11 +3,21 @@ from sqlalchemy import create_engine, text
 from datetime import datetime, timedelta
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://admin:pipeline_secret@localhost:5433/media_pipeline")
-engine = create_engine(DATABASE_URL)
+
+_engine = None
+
+
+def _get_pricing_engine():
+    """Lazily create the SQLAlchemy engine so importing this module does not require DB drivers."""
+    global _engine
+    if _engine is None:
+        _engine = create_engine(DATABASE_URL)
+    return _engine
+
 
 class PricingOracle:
     def __init__(self):
-        self.engine = engine
+        pass
 
     def get_market_price(self, upc_or_title: str):
         """
@@ -19,7 +29,7 @@ class PricingOracle:
             return None
             
         try:
-            with self.engine.connect() as conn:
+            with _get_pricing_engine().connect() as conn:
                 query = text("SELECT average_sold_price, last_updated FROM market_values WHERE upc = :upc LIMIT 1")
                 result = conn.execute(query, {"upc": upc_or_title}).fetchone()
                 

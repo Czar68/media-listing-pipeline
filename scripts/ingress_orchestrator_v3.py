@@ -48,7 +48,8 @@ ROOT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
-from core.ingestor.schema import Manifest
+from core.ingestor.schema import Manifest, game_identity_template
+from core.logic.game_listing_defaults import EBAY_CONDITION_ID, EBAY_CONDITION_LABEL
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -70,8 +71,6 @@ RAW_DIR     = os.getenv("RAW_DIR",     _default_raw)
 DRAFTS_DIR  = os.path.join(ROOT_DIR, "data", "drafts")   # never touched
 
 ACCEPTED_EXT        = (".jpg", ".jpeg", ".png")
-EBAY_CONDITION_ID   = 7000          # "Used - Acceptable"
-EBAY_CONDITION_LABEL = "Used - Acceptable"
 STABILIZATION_DELAY = 1.0           # seconds — wait for scanner to close file
 
 os.makedirs(INGRESS_DIR, exist_ok=True)
@@ -303,22 +302,25 @@ def process_disc(filepath: str, source_label: str = "ingress") -> bool:
     # 4. Build manifest
     title_hint = extract_title_hint(filename)
 
+    id_body = game_identity_template()
+    id_body["title_hint"] = title_hint
+    id_body["ebay_condition_id"] = EBAY_CONDITION_ID
+    id_body["ebay_condition_label"] = EBAY_CONDITION_LABEL
+
     manifest = Manifest(
         transaction_id=disc_uuid,
         status="pending_forensic_ocr",
         raw_identifier=disc_uuid,
         image_paths=[filepath],
-        identity={
-            "title": None,
-            "title_hint": title_hint,
-            "format": "Game Disc",
-            "confidence": 0.0,
-            "metadata_source": "gemini-1.5-flash",
-            # eBay condition — hardcoded for disc-only used games
-            "ebay_condition_id": EBAY_CONDITION_ID,
-            "ebay_condition_label": EBAY_CONDITION_LABEL,
+        identity=id_body,
+        financials={
+            "listing_price": 0.0,
+            "ebay_fees": 0.0,
+            "shipping_cost": 0.0,
+            "acquisition_cost": 1.0,
+            "packaging_cost": 0.25,
+            "net_profit": 0.0,
         },
-        financials={"listing_price": 0.0, "ebay_fees": 0.0, "shipping_cost": 0.0, "net_profit": 0.0},
         flags={"human_review_required": True, "conflict_detected": False, "is_lot": False},
     )
 

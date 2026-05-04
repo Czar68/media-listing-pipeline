@@ -14,6 +14,8 @@ try:
     from core.ingestor.schema import Manifest
     from core.financials.calculator import calculate_financials
     from core.adapters.pricing_oracle import PricingOracle
+    from core.logic.domain_config import get_domain_config
+    from core.logic.game_listing_defaults import EBAY_CONDITION_ID, EBAY_CONDITION_LABEL
     from core.ai_broker.connection import connect_with_retry
     print(" [v] Success: Manifest schema, calculator, pricing oracle, and connection imported.")
 except ImportError as e:
@@ -24,12 +26,23 @@ except ImportError as e:
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
 RABBITMQ_QUEUE = "financial_pipeline_v2"
 
+DOMAIN_CONFIG = get_domain_config()
+
+
 def process_financials(manifest: Manifest) -> Manifest:
     """
     Process financial calculations for the manifest.
+
+    Individual video game units use USPS **Ground Advantage** (under ~1 lb,
+    padded mailer). Economics use ``calculate_financials`` (standard parcel tier,
+    not USPS promotional library/educational book rates).
     """
     print(f" [*] Processing Financials for Transaction: {manifest.transaction_id}")
-    
+
+    if DOMAIN_CONFIG["domain"] == "GAMES":
+        manifest.identity["ebay_condition_id"] = EBAY_CONDITION_ID
+        manifest.identity["ebay_condition_label"] = EBAY_CONDITION_LABEL
+
     # Call PricingOracle
     upc_or_title = manifest.identity.get("upc") or manifest.identity.get("title")
     oracle = PricingOracle()
@@ -41,29 +54,36 @@ def process_financials(manifest: Manifest) -> Manifest:
     else:
         manifest.financials["listing_price"] = market_price
 
-    # Extract listing_price and acquisition_cost from the manifest if available.
-    # Defaulting to 0.0 if not present.
-    listing_price = manifest.financials.get("listing_price", 0.0)
-    acquisition_cost = manifest.financials.get("acquisition_cost", 0.0)
-    
-    # Calculate financials
-    updated_financials = calculate_financials(listing_price, acquisition_cost)
+    listing_price = float(manifest.financials.get("listing_price", 0.0))
+    acquisition_cost = float(
+        manifest.financials.get("acquisition_cost", 1.0)
+    )
+    packaging_cost = float(manifest.financials.get("packaging_cost", 0.25))
+
+    updated_financials = calculate_financials(
+        listing_price, acquisition_cost, packaging_cost
+    )
     
     # Update manifest financials
     manifest.financials.update(updated_financials)
     
-    # Business logic for listing status
     net_profit = updated_financials.get("net_profit", 0.0)
-    
-    if net_profit < 2.00:
+
+    if net_profit < 0.0:
         manifest.status = "STATUS_LOT_ONLY"
         return manifest
-        
+
+    # Thin margin: avoid "trading dollars" on low-value games after Ground Advantage + unit basis.
+    if net_profit < 1.50:
+        manifest.status = "flagged_for_review"
+        manifest.flags["human_review_required"] = True
+        return manifest
+
     if not manifest.flags.get("human_review_required"):
         manifest.status = "ready_for_listing"
     else:
         manifest.status = "flagged_for_review"
-        
+
     return manifest
 
 def handle_task(ch, method, properties, body):

@@ -16,6 +16,24 @@ import os
 from typing import TypedDict
 
 
+def normalize_gemini_model_id(model_id: str) -> str:
+    """
+    Normalise Gemini model ids for the Google Gen AI SDK.
+
+    - Collapses accidental ``models/models/...`` chains to a single ``models/`` segment.
+    - Strips the leading ``models/`` prefix so the client receives a bare id
+      (e.g. ``gemini-1.5-flash-latest``), which the SDK resolves without doubling.
+    """
+    t = (model_id or "").strip()
+    if not t:
+        return t
+    while "models/models/" in t:
+        t = t.replace("models/models/", "models/", 1)
+    if t.startswith("models/"):
+        t = t[len("models/") :]
+    return t
+
+
 class DomainConfig(TypedDict):
     domain: str
     ocr_model: str
@@ -73,11 +91,31 @@ def get_domain_config() -> DomainConfig:
     """
     Returns the domain configuration for the active domain.
     Reads ACTIVE_DOMAIN from the environment; defaults to MOVIES.
+
+    When OCR_MODEL / LISTING_MODEL are set in the environment, they override the
+    baked-in defaults after ``normalize_gemini_model_id`` (avoids ``models/models/...``).
     """
     domain = os.getenv("ACTIVE_DOMAIN", "MOVIES").upper().strip()
     config = _DOMAIN_MAP.get(domain)
     if config is None:
         print(f" [DomainConfig] WARNING: Unknown domain '{domain}'. Falling back to MOVIES.")
         config = _MOVIES_CONFIG
-    print(f" [DomainConfig] Active domain: {config['domain']} | OCR model: {config['ocr_model']}")
-    return config
+
+    merged: DomainConfig = dict(config)
+    ocr_env = os.getenv("OCR_MODEL", "").strip()
+    if ocr_env:
+        merged["ocr_model"] = normalize_gemini_model_id(ocr_env)
+    else:
+        merged["ocr_model"] = normalize_gemini_model_id(merged["ocr_model"])
+
+    listing_env = os.getenv("LISTING_MODEL", "").strip()
+    if listing_env:
+        merged["listing_model"] = normalize_gemini_model_id(listing_env)
+    else:
+        merged["listing_model"] = normalize_gemini_model_id(merged["listing_model"])
+
+    print(
+        f" [DomainConfig] Active domain: {merged['domain']} | "
+        f"OCR model: {merged['ocr_model']} | listing model: {merged['listing_model']}"
+    )
+    return merged

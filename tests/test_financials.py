@@ -1,6 +1,7 @@
 import unittest
 import sys
 import os
+from unittest.mock import patch
 
 # Ensure root is in path
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -22,26 +23,34 @@ class TestFinancials(unittest.TestCase):
         result = calculate_financials(listing_price, acquisition_cost)
         
         self.assertEqual(result["ebay_fees"], 1.80)
-        self.assertEqual(result["shipping_cost"], 4.25)
-        self.assertEqual(result["net_profit"], 2.95)
+        self.assertEqual(result["shipping_cost"], 4.95)
+        self.assertEqual(result["packaging_cost"], 0.25)
+        self.assertEqual(result["net_profit"], 2.00)
 
-    def test_worker_loss_leader_flagging(self):
-        """Test that a $5.00 listing is properly flagged for human review."""
+    def test_worker_default_listing_flagging(self):
+        """Empty manifest gets default listing price; oracle gap triggers human review."""
         manifest = Manifest()
         manifest.financials["listing_price"] = 5.00
         manifest.financials["acquisition_cost"] = 1.00
-        
-        # Calculate expected profit manually for reference
-        # Fees: (5.00 * 0.1495) + 0.30 = 0.7475 + 0.30 = 1.0475 -> 1.05
-        # Shipping: 4.25
-        # Acq: 1.00
-        # Profit: 5.00 - 1.05 - 4.25 - 1.00 = -1.30
-        
+
         processed_manifest = process_financials(manifest)
-        
+
         self.assertEqual(processed_manifest.status, "flagged_for_review")
         self.assertTrue(processed_manifest.flags["human_review_required"])
-        self.assertLess(processed_manifest.financials["net_profit"], 2.00)
+        # Oracle uses default $9.99 listing; unit basis $1.00 acq + $0.25 pack → net $2.00 (>= $1.50 floor).
+        # human_review_required remains True from pricing fallback → flagged_for_review.
+        self.assertAlmostEqual(processed_manifest.financials["net_profit"], 2.00, places=2)
+
+    @patch("core.ai_broker.financial_worker.PricingOracle")
+    def test_worker_net_below_margin_floor_flags_review(self, mock_oracle_cls):
+        """Oracle listing low enough that net_profit < $1.50 triggers flagged_for_review."""
+        mock_oracle_cls.return_value.get_market_price.return_value = 9.0
+        manifest = Manifest()
+        manifest.identity["upc"] = "000000000000"
+        processed = process_financials(manifest)
+        self.assertLess(processed.financials["net_profit"], 1.50)
+        self.assertEqual(processed.status, "flagged_for_review")
+        self.assertTrue(processed.flags["human_review_required"])
 
 if __name__ == "__main__":
     unittest.main()

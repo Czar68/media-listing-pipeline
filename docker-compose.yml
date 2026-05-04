@@ -47,7 +47,7 @@ services:
   # ── Worker 1: Identity (Who is this disc?) ─────────────────────────────────
   identity_worker:
     build: .
-    container_name: worker_identity
+    container_name: identity_worker
     command: python core/ai_broker/identity_worker.py
     working_dir: /app                       # explicit WORKDIR guard
     env_file: .env                          # loads ACTIVE_DOMAIN etc.
@@ -59,6 +59,10 @@ services:
       - RABBITMQ_HOST=rabbitmq
       - POSTGRES_HOST=postgres
       - DATABASE_URL=postgresql://admin:pipeline_secret@postgres:5432/media_pipeline
+      - ACTIVE_DOMAIN=GAMES
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      # Maps host .env OCR_MODEL -> container GEMINI_MODEL (full model resource id).
+      - GEMINI_MODEL=${OCR_MODEL}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -71,7 +75,7 @@ services:
   # ── Worker 2: Financials (Is it profitable?) ───────────────────────────────
   financial_worker:
     build: .
-    container_name: worker_finance
+    container_name: financial_worker
     command: python core/ai_broker/financial_worker.py
     working_dir: /app
     env_file: .env
@@ -81,6 +85,7 @@ services:
       - RABBITMQ_HOST=rabbitmq
       - POSTGRES_HOST=postgres
       - DATABASE_URL=postgresql://admin:pipeline_secret@postgres:5432/media_pipeline
+      - ACTIVE_DOMAIN=GAMES
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -93,7 +98,7 @@ services:
   # ── Worker 3: Listing (Write the eBay draft) ───────────────────────────────
   listing_worker:
     build: .
-    container_name: worker_listing
+    container_name: listing_worker
     command: python core/ai_broker/listing_worker.py
     working_dir: /app
     env_file: .env
@@ -104,6 +109,10 @@ services:
       - POSTGRES_HOST=postgres
       - DATABASE_URL=postgresql://admin:pipeline_secret@postgres:5432/media_pipeline
       - EBAY_PRODUCTION=false
+      - ACTIVE_DOMAIN=GAMES
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      # Maps host .env LISTING_MODEL -> container GEMINI_MODEL.
+      - GEMINI_MODEL=${LISTING_MODEL}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -114,7 +123,7 @@ services:
   # ── Worker 4: Ingress (The Watcher) ───────────────────────────────────────
   ingress_monitor:
     build: .
-    container_name: monitor_watcher
+    container_name: ingress_monitor
     command: python scripts/ingress_monitor.py
     working_dir: /app
     env_file: .env
@@ -140,7 +149,7 @@ services:
   # Sweeps raw/ and ingress/ on startup, then watches ingress/ live.
   ingress_orchestrator_v3:
     build: .
-    container_name: orchestrator_v3
+    container_name: ingress_orchestrator_v3
     command: python scripts/ingress_orchestrator_v3.py
     working_dir: /app
     env_file: .env
@@ -157,6 +166,26 @@ services:
     restart: on-failure
     networks:
       - pipeline_network
+
+  # TODO: Fix integration with google-genai and update 'os' imports before re-enabling.
+  # ebay-arbitrage-scanner:
+  #   build: .
+  #   container_name: ebay-arbitrage-scanner
+  #   command: python scripts/ebay_arbitrage_scanner.py
+  #   working_dir: /app
+  #   env_file: .env
+  #   volumes:
+  #     - .:/app
+  #   environment:
+  #     - RABBITMQ_HOST=rabbitmq
+  #     - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+  #     - GEMINI_MODEL=${OCR_MODEL}
+  #   depends_on:
+  #     rabbitmq:
+  #       condition: service_healthy
+  #   restart: on-failure
+  #   networks:
+  #     - pipeline_network
 
 # ── Shared User-Defined Bridge Network ─────────────────────────────────────
 # A named user-defined bridge is REQUIRED for Docker's embedded DNS to

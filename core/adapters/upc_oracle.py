@@ -25,7 +25,8 @@ def lookup_by_hub_code(hub_code: str) -> dict:
     return {
         "title": None,
         "artist": None,
+        "publisher": None,
         "upc": None,
-        "format": "DVD",
-        "confidence": 0.0
+        "format": "Game Disc",
+        "confidence": 0.0,
     }

@@ -104,7 +104,7 @@ Condition: Disc only (no case/artwork)
 
 ${generateConditionNotes(input)}
 
-Ships via Media Mail.
+Ships via USPS Ground Advantage.
   `.trim();
 }
 
