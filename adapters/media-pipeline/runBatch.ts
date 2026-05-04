@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
-import { executeBatchListings, type ExecutionResult } from "./executeBatchListings";
+import type { ExecutionResult } from "./execution/types";
+import { executeListingsWithMockBatchExecutor } from "./execution/batchListingExecution";
 import {
   buildExecutionTrace,
   createTraceEvent,
@@ -14,6 +15,13 @@ import { MediaAdapterImpl } from "./mediaAdapter";
 import { scanBatchRawItems, type ScanBatchOptions } from "./scanner";
 import type { NormalizedInventoryItem, RawScanResult } from "./types";
 import type { PublishResult } from "./execution/types";
+import {
+  validateEnrichedInventoryItem,
+  validateExecutionInput,
+  validateExecutionResult,
+  validateIngestItem,
+  validateNormalizedInventoryItem,
+} from "./validation/pipelineStageValidators";
 
 /** Temporary: set `MEDIA_PIPELINE_DRY_RUN_TRACE=1` to log execution inputs. */
 function dryRunTraceEnabled(): boolean {
@@ -108,8 +116,56 @@ export type RunBatchResult = {
   readonly execution: ExecutionResult;
 };
 
+export type RunBatchListingRow = {
+  readonly sku: string;
+  readonly title: string;
+  readonly offerId: string;
+  readonly listingId?: string;
+  readonly publishStatus: PublishResult["status"];
+};
+
+export type RunBatchFailureRow = {
+  readonly sku: string;
+  readonly message: string;
+};
+
+export type RunBatchMockSummary = {
+  readonly success: boolean;
+  readonly listings: readonly RunBatchListingRow[];
+  readonly failures: readonly RunBatchFailureRow[];
+  readonly mode: "mock";
+};
+
+function buildRunBatchMockSummary(execution: ExecutionResult): RunBatchMockSummary {
+  const listings: RunBatchListingRow[] = [...execution.success]
+    .sort((a, b) => String(a.item.sku).localeCompare(String(b.item.sku)))
+    .map((s) => ({
+      sku: String(s.item.sku),
+      title: s.item.title,
+      offerId: s.publishResult.offerId,
+      ...(s.publishResult.listingId !== undefined ? { listingId: s.publishResult.listingId } : {}),
+      publishStatus: s.publishResult.status,
+    }));
+  const failures: RunBatchFailureRow[] = [...execution.failed]
+    .sort((a, b) => String(a.item.sku).localeCompare(String(b.item.sku)))
+    .map((f) => ({
+      sku: String(f.item.sku),
+      message: f.error.message,
+    }));
+  return {
+    success: failures.length === 0,
+    listings,
+    failures,
+    mode: "mock",
+  };
+}
+
 /** {@link RunBatchResult} plus aggregated {@link ExecutionTrace} for orchestration observability. */
-export type RunBatchWithTraceResult = RunBatchResult & { readonly trace: ExecutionTrace };
+export type RunBatchWithTraceResult = RunBatchResult & {
+  readonly trace: ExecutionTrace;
+  /** Flat copy of {@link ExecutionTrace.events} for run artifacts / CLI persistence. */
+  readonly executionTrace: readonly ExecutionTraceEvent[];
+} & RunBatchMockSummary;
 
 export interface CanonicalRunBinding {
   readonly canonicalEpid: string;
@@ -120,10 +176,6 @@ function isCanonicalBindingMap(
   value: unknown
 ): value is ReadonlyMap<string, CanonicalRunBinding> {
   return value instanceof Map;
-}
-
-function executionModeLabel(): "ebay" | "mock" {
-  return process.env.EXECUTION_MODE === "ebay" ? "ebay" : "mock";
 }
 
 /**
@@ -208,7 +260,7 @@ function appendErrorAndRecoveryEvents(
 }
 
 /**
- * Strict order: scan → normalize → canonical EPID projection → {@link executeBatchListings}.
+ * Strict order: scan → normalize → canonical EPID projection → mock-only batch execution layer.
  */
 export async function runBatch(
   items: readonly unknown[],
@@ -238,6 +290,9 @@ export async function runBatch(
   const adapter = new MediaAdapterImpl();
 
   const rawScanResults: RawScanResult[] = scanBatchRawItems(items, scanOptions);
+  for (const raw of rawScanResults) {
+    validateIngestItem(raw);
+  }
   events.push(
     createTraceEvent("TRACE_SCAN", runId, {
       rawCount: rawScanResults.length,
@@ -246,13 +301,19 @@ export async function runBatch(
 
   const normalizedInventoryItems: NormalizedInventoryItem[] = [];
   for (const raw of rawScanResults) {
-    normalizedInventoryItems.push(adapter.normalize(raw));
+    validateIngestItem(raw);
+    const normalized = adapter.normalize(raw);
+    validateNormalizedInventoryItem(normalized);
+    normalizedInventoryItems.push(normalized);
   }
   events.push(
     createTraceEvent("TRACE_NORMALIZE", runId, {
       normalizedCount: normalizedInventoryItems.length,
     })
   );
+  for (const row of normalizedInventoryItems) {
+    validateNormalizedInventoryItem(row);
+  }
 
   const enrichedInventoryItems: EpidEnrichedInventoryItem[] = normalizedInventoryItems.flatMap((row) => {
     if (canonicalBindingBySku === null) {
@@ -275,6 +336,15 @@ export async function runBatch(
     ];
   });
 
+  for (const row of enrichedInventoryItems) {
+    validateEnrichedInventoryItem(row);
+  }
+
+  for (const row of enrichedInventoryItems) {
+    const listing = toEbayInventoryItem(row);
+    validateExecutionInput({ item: row, listing });
+  }
+
   if (canonicalBindingBySku !== null) {
     logDryRunExecutionInputs(
       normalizedInventoryItems,
@@ -285,12 +355,16 @@ export async function runBatch(
 
   events.push(
     createTraceEvent("TRACE_EXECUTE", runId, {
-      executionMode: executionModeLabel(),
+      executionMode: "mock",
       itemCount: enrichedInventoryItems.length,
     })
   );
 
-  const execution: ExecutionResult = await executeBatchListings(enrichedInventoryItems);
+  const execution: ExecutionResult = await executeListingsWithMockBatchExecutor(enrichedInventoryItems);
+
+  validateExecutionResult(execution);
+
+  const mockSummary = buildRunBatchMockSummary(execution);
 
   appendPublishTraceEvents(runId, execution, events);
   appendErrorAndRecoveryEvents(runId, execution, events);
@@ -308,5 +382,7 @@ export async function runBatch(
     enrichedInventoryItems,
     execution,
     trace,
+    executionTrace: trace.events,
+    ...mockSummary,
   };
 }

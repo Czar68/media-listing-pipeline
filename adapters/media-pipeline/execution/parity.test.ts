@@ -82,13 +82,18 @@ async function testParity() {
 function validateExecutionSuccess(success: ExecutionSuccess): void {
   const successKeys = getObjectKeys(success).sort();
   
-  if (successKeys.length === 5 && 
-      successKeys.includes('item') && 
-      successKeys.includes('ebayPayload') && 
-      successKeys.includes('response') &&
-      successKeys.includes('recovered') &&
-      successKeys.includes('retryCount')) {
-    console.log('✓ ExecutionSuccess has correct fields (item, ebayPayload, response, recovered, retryCount)');
+  if (
+    successKeys.length >= 6 &&
+    successKeys.includes('item') &&
+    successKeys.includes('ebayPayload') &&
+    successKeys.includes('response') &&
+    successKeys.includes('publishResult') &&
+    successKeys.includes('recovered') &&
+    successKeys.includes('retryCount')
+  ) {
+    console.log(
+      '✓ ExecutionSuccess has correct fields (item, ebayPayload, response, publishResult, recovered, retryCount)'
+    );
   } else {
     console.error('✗ ExecutionSuccess has unexpected fields:', successKeys);
     process.exit(1);

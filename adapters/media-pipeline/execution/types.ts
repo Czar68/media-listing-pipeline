@@ -3,7 +3,7 @@ import type { EbayInventoryItem } from '../ebayMapper';
 
 /**
  * Strict execution result contract shared by all executors
- * Ensures MockExecutor and EbayExecutor produce identical shapes
+ * Ensures mock and (historical) production executor rows share the same result shapes.
  */
 
 export type ErrorType = 

@@ -92,12 +92,13 @@ export type {
   EbayInventoryProduct,
   EbayListingCondition,
 } from "./ebayMapper";
-export { executeBatchListings } from "./executeBatchListings";
 export type {
   ExecutionResult,
-  ExecuteBatchListingsResult,
-  ExecuteBatchListingsInput,
-} from "./executeBatchListings";
+  ExecutionSuccess,
+  ExecutionFailed,
+  ExecutionError,
+} from "./execution/types";
+export type { ExecuteBatchListingsResult, ExecuteBatchListingsInput } from "./execution/batchListingExecution";
 export {
   strategyAwareRun,
   selectListingStrategy,

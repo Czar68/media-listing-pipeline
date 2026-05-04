@@ -126,8 +126,8 @@ export function createAdversarialEbayClientRequest(
 }
 
 /**
- * Replaces the resolved `api/ebayClient.js` module in require.cache so {@link EbayExecutor}
- * picks up the stub. Call `restore()` after the ebay-mode run.
+ * Replaces the resolved `api/ebayClient.js` module in require.cache so tests can intercept HTTP.
+ * Call `restore()` after the run.
  */
 export function installEbayClientStubForValidation(): {
   readonly restore: () => void;

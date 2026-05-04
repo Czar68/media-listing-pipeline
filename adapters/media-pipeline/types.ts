@@ -63,6 +63,9 @@ export interface RawScanResult {
   capturedAt: string;
 }
 
+/** Scanner / ingest stage row (alias of {@link RawScanResult}). */
+export type IngestItem = RawScanResult;
+
 /** Normalized inventory row produced only by {@link MediaAdapter}. */
 export interface NormalizedInventoryItem {
   sku: string;

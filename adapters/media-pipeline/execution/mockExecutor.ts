@@ -1,7 +1,7 @@
 import type { NormalizedInventoryItem } from '../types';
 import type { EbayInventoryItem } from '../ebayMapper';
 import { ListingExecutionAdapter } from './executor';
-import type { ExecutionSuccess, ExecutionFailed, ExecutionError, ErrorType, PublishResult } from './types';
+import type { ExecutionSuccess, PublishResult } from './types';
 
 /**
  * Mock implementation of the listing execution adapter
@@ -14,75 +14,63 @@ export class MockExecutor implements ListingExecutionAdapter {
   async execute(input: {
     item: NormalizedInventoryItem;
     ebayPayload: EbayInventoryItem;
-  }): Promise<ExecutionSuccess | ExecutionFailed> {
+  }): Promise<ExecutionSuccess> {
     const { item, ebayPayload } = input;
 
-    try {
-      const response = await this.createInventoryItem(ebayPayload);
-      
-      const fulfillmentPolicyId = process.env.EBAY_FULFILLMENT_POLICY_ID?.trim();
-      const paymentPolicyId = process.env.EBAY_PAYMENT_POLICY_ID?.trim();
-      const returnPolicyId = process.env.EBAY_RETURN_POLICY_ID?.trim();
-      const listingPolicies =
-        fulfillmentPolicyId && paymentPolicyId && returnPolicyId
-          ? {
-              fulfillmentPolicyId,
-              paymentPolicyId,
-              returnPolicyId,
-            }
-          : undefined;
+    const response = await this.createInventoryItem(ebayPayload);
 
-      const offerBody = {
-        sku: ebayPayload.sku,
-        marketplaceId: 'EBAY_US',
-        format: 'FIXED_PRICE',
-        availableQuantity: 1,
-        merchantLocationKey: process.env.EBAY_MERCHANT_LOCATION_KEY ?? 'mock-location',
-        categoryId: String(process.env.EBAY_LISTING_CATEGORY_ID ?? '111422').trim(),
-        ...(listingPolicies !== undefined ? { listingPolicies } : {}),
-        pricingSummary: {
-          price: {
-            value: '9.99',
-            currency: 'USD'
+    const fulfillmentPolicyId = process.env.EBAY_FULFILLMENT_POLICY_ID?.trim();
+    const paymentPolicyId = process.env.EBAY_PAYMENT_POLICY_ID?.trim();
+    const returnPolicyId = process.env.EBAY_RETURN_POLICY_ID?.trim();
+    const listingPolicies =
+      fulfillmentPolicyId && paymentPolicyId && returnPolicyId
+        ? {
+            fulfillmentPolicyId,
+            paymentPolicyId,
+            returnPolicyId,
           }
-        }
-      };
+        : undefined;
 
-      const offerResponse = await this.createOffer(offerBody);
-      const offerId = (offerResponse as { data?: { offerId?: string } }).data?.offerId || 
-                     (offerResponse as { offerId?: string }).offerId || 
-                     ebayPayload.sku;
+    const offerBody = {
+      sku: ebayPayload.sku,
+      marketplaceId: 'EBAY_US',
+      format: 'FIXED_PRICE',
+      availableQuantity: 1,
+      merchantLocationKey: process.env.EBAY_MERCHANT_LOCATION_KEY ?? 'mock-location',
+      categoryId: String(process.env.EBAY_LISTING_CATEGORY_ID ?? '111422').trim(),
+      ...(listingPolicies !== undefined ? { listingPolicies } : {}),
+      pricingSummary: {
+        price: {
+          value: '9.99',
+          currency: 'USD',
+        },
+      },
+    };
 
-      const publishResponse = await this.publishOffer(offerId);
-      const publishHttpStatus = (publishResponse as { status?: number }).status ?? 200;
-      const publishResult: PublishResult = {
-        offerId,
-        status: 'PUBLISHED',
-        httpStatus: publishHttpStatus,
-      };
+    const offerResponse = await this.createOffer(offerBody);
+    const offerId =
+      (offerResponse as { data?: { offerId?: string } }).data?.offerId ||
+      (offerResponse as { offerId?: string }).offerId ||
+      ebayPayload.sku;
 
-      return {
-        item,
-        ebayPayload,
-        response: this.normalizeResponse(response),
-        publishResult,
-        recovered: false,
-        retryCount: 0,
-      };
-    } catch (err) {
-      const error: ExecutionError = {
-        type: 'UNKNOWN',
-        message: err instanceof Error ? err.message : String(err),
-        raw: err,
-      };
-      return {
-        item,
-        ebayPayload,
-        error,
-        recovered: false,
-        retryCount: 0,
-      };
-    }
+    const publishResponse = await this.publishOffer(offerId);
+    const publishHttpStatus = (publishResponse as { status?: number }).status ?? 200;
+    const listingIdFromPublish = (publishResponse as { data?: { listingId?: string } }).data?.listingId;
+    const publishResult: PublishResult = {
+      offerId,
+      status: 'PUBLISHED',
+      httpStatus: publishHttpStatus,
+      listingId: listingIdFromPublish ?? `mock-listing-${offerId}`,
+    };
+
+    return {
+      item,
+      ebayPayload,
+      response: this.normalizeResponse(response),
+      publishResult,
+      recovered: false,
+      retryCount: 0,
+    };
   }
 
   private async createInventoryItem(item: EbayInventoryItem): Promise<unknown> {
