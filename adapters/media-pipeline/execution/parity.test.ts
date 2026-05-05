@@ -7,7 +7,8 @@
 
 import { MockExecutor } from './mockExecutor';
 import type { NormalizedInventoryItem } from '../types';
-import type { EbayInventoryItem } from '../ebayMapper';
+import type { EpidEnrichedInventoryItem } from '../epidEnricher';
+import { toCanonicalExecutionListing } from '../contracts/toCanonicalExecutionListing';
 import type { ExecutionSuccess, ExecutionFailed, ErrorType } from './types';
 
 function getObjectKeys(obj: unknown): string[] {
@@ -43,26 +44,11 @@ async function testParity() {
     },
   };
 
-  const ebayPayload: EbayInventoryItem = {
-    sku: 'test-sku-001',
-    condition: 'NEW' as const,
-    product: {
-      title: 'Test Item',
-      description: 'Test Description',
-      imageUrls: ['https://example.com/image.jpg'],
-    },
-    sourceMetadata: {
-      system: 'media-listing-pipeline',
-      origin: 'test',
-      externalId: 'test-001',
-      capturedAt: '2026-01-01T00:00:00.000Z',
-      normalizedAt: '2026-01-01T00:00:00.000Z',
-    },
-  };
+  const listing = toCanonicalExecutionListing(normalizedItem as EpidEnrichedInventoryItem);
 
   // Test SINGLE ITEM execution (no batch)
   console.log('Testing per-item execution...');
-  const result = await mockExecutor.execute({ item: normalizedItem, ebayPayload });
+  const result = await mockExecutor.execute({ listing });
   console.log('Per-item result:', JSON.stringify(result, null, 2));
 
   // Validate result is either ExecutionSuccess or ExecutionFailed

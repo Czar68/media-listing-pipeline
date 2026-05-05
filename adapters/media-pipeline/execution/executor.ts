@@ -1,6 +1,5 @@
-import type { NormalizedInventoryItem } from '../types';
-import type { EbayInventoryItem } from '../ebayMapper';
 import type { ExecutionSuccess, ExecutionFailed, ExecutionResult } from './types';
+import type { CanonicalExecutionListing } from '../contracts/pipelineStageContracts';
 
 /**
  * Execution interface for listing adapters
@@ -9,18 +8,15 @@ import type { ExecutionSuccess, ExecutionFailed, ExecutionResult } from './types
  * Returns per-item result (success or failed)
  */
 
-/** Batch boundary: map+execute aggregation for a set of normalized listing rows. */
+/** Batch boundary: map+execute aggregation for canonical pre-execution listings. */
 export interface BatchListingExecutor {
-  execute(listings: readonly NormalizedInventoryItem[]): Promise<ExecutionResult>;
+  execute(listings: readonly CanonicalExecutionListing[]): Promise<ExecutionResult>;
 }
 
 export interface ListingExecutionAdapter {
   /**
-   * Execute the full listing workflow for a SINGLE item
+   * Execute the full listing workflow for a SINGLE canonical listing payload.
    * Returns normalized per-item result (success or failed)
    */
-  execute(input: {
-    item: NormalizedInventoryItem;
-    ebayPayload: EbayInventoryItem;
-  }): Promise<ExecutionSuccess | ExecutionFailed>;
+  execute(input: { listing: CanonicalExecutionListing }): Promise<ExecutionSuccess | ExecutionFailed>;
 }

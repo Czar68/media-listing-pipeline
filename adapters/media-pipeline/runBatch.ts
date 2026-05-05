@@ -10,7 +10,8 @@ import {
 import {
   type EpidEnrichedInventoryItem,
 } from "./epidEnricher";
-import { toEbayInventoryItem, type EbayInventoryItem } from "./ebayMapper";
+import type { CanonicalExecutionListing } from "./contracts/pipelineStageContracts";
+import { toCanonicalExecutionListing } from "./contracts/toCanonicalExecutionListing";
 import { MediaAdapterImpl } from "./mediaAdapter";
 import { scanBatchRawItems, type ScanBatchOptions } from "./scanner";
 import type { NormalizedInventoryItem, RawScanResult } from "./types";
@@ -37,8 +38,8 @@ function dryRunStrategyBasePriceFromMetadata(item: NormalizedInventoryItem): num
   return typeof basePrice === "number" && Number.isFinite(basePrice) ? basePrice : undefined;
 }
 
-function dryRunPayloadListPrice(payload: EbayInventoryItem): number | undefined {
-  const p = payload as EbayInventoryItem & {
+function dryRunPayloadListPrice(payload: CanonicalExecutionListing): number | undefined {
+  const p = payload as CanonicalExecutionListing & {
     price?: number | { value?: string | number };
     listingPrice?: number;
   };
@@ -86,7 +87,7 @@ function logDryRunExecutionInputs(
     }
     let payloadList: number | undefined;
     try {
-      const payload = toEbayInventoryItem(enriched);
+      const payload = toCanonicalExecutionListing(enriched);
       payloadList = dryRunPayloadListPrice(payload);
     } catch {
       payloadList = undefined;
@@ -340,9 +341,11 @@ export async function runBatch(
     validateEnrichedInventoryItem(row);
   }
 
+  const canonicalExecutionListings: CanonicalExecutionListing[] = [];
   for (const row of enrichedInventoryItems) {
-    const listing = toEbayInventoryItem(row);
+    const listing = toCanonicalExecutionListing(row);
     validateExecutionInput({ item: row, listing });
+    canonicalExecutionListings.push(listing);
   }
 
   if (canonicalBindingBySku !== null) {
@@ -360,7 +363,7 @@ export async function runBatch(
     })
   );
 
-  const execution: ExecutionResult = await executeListingsWithMockBatchExecutor(enrichedInventoryItems);
+  const execution: ExecutionResult = await executeListingsWithMockBatchExecutor(canonicalExecutionListings);
 
   validateExecutionResult(execution);
 

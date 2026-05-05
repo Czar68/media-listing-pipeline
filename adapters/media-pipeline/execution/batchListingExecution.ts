@@ -1,39 +1,28 @@
-import { toEbayInventoryItem, type EbayInventoryItem } from "../ebayMapper";
-import type { NormalizedInventoryItem } from "../types";
+import type { CanonicalExecutionListing } from "../contracts/pipelineStageContracts";
 import type { BatchListingExecutor, ListingExecutionAdapter } from "./executor";
 import { MockExecutor } from "./mockExecutor";
-import type {
-  ExecutionResult,
-  ExecutionSuccess,
-  ExecutionFailed,
-  ExecutionError,
-} from "./types";
+import type { ExecutionResult, ExecutionSuccess, ExecutionFailed } from "./types";
 
 /** Historical name — same as {@link ExecutionResult}; batch execution is mock-only via `runBatch`. */
 export type ExecuteBatchListingsResult = ExecutionResult;
 
 export type ExecuteBatchListingsInput =
-  | readonly NormalizedInventoryItem[]
-  | { readonly normalizedInventoryItems: readonly NormalizedInventoryItem[] };
+  | readonly CanonicalExecutionListing[]
+  | { readonly canonicalExecutionListings: readonly CanonicalExecutionListing[] };
 
-function ebayPayloadForCorruptNormalizedItem(item: NormalizedInventoryItem): EbayInventoryItem {
-  return {
-    sku: String(item?.sku ?? "unknown"),
-    condition: "NEW",
-    product: {
-      title: String(item?.title ?? ""),
-      description: String(item?.description ?? ""),
-      imageUrls: Array.isArray(item?.media?.images) ? [...item.media.images] : [],
-    },
-    sourceMetadata: {
-      system: item?.source?.system ?? "media-listing-pipeline",
-      origin: String(item?.source?.origin ?? ""),
-      externalId: item?.source?.externalId,
-      capturedAt: String(item?.timestamps?.capturedAt ?? ""),
-      normalizedAt: String(item?.timestamps?.normalizedAt ?? ""),
-      category: item?.category,
-    },
-  };
+function resolveCanonicalListings(input: ExecuteBatchListingsInput): CanonicalExecutionListing[] {
+  if (
+    typeof input === "object" &&
+    input !== null &&
+    !Array.isArray(input) &&
+    "canonicalExecutionListings" in input
+  ) {
+    return [
+      ...(input as { readonly canonicalExecutionListings: readonly CanonicalExecutionListing[] })
+        .canonicalExecutionListings,
+    ];
+  }
+  return [...(input as readonly CanonicalExecutionListing[])];
 }
 
 /**
@@ -43,30 +32,12 @@ function ebayPayloadForCorruptNormalizedItem(item: NormalizedInventoryItem): Eba
 class MockOnlyBatchListingExecutor implements BatchListingExecutor {
   constructor(private readonly singleItemExecutor: ListingExecutionAdapter) {}
 
-  async execute(listings: readonly NormalizedInventoryItem[]): Promise<ExecutionResult> {
+  async execute(listings: readonly CanonicalExecutionListing[]): Promise<ExecutionResult> {
     const success: ExecutionSuccess[] = [];
     const failed: ExecutionFailed[] = [];
 
-    for (const item of listings) {
-      let ebayPayload: EbayInventoryItem;
-      try {
-        ebayPayload = toEbayInventoryItem(item);
-      } catch (mapErr) {
-        const fallbackPayload = ebayPayloadForCorruptNormalizedItem(item);
-        const error: ExecutionError = {
-          type: "UNKNOWN",
-          message: mapErr instanceof Error ? mapErr.message : String(mapErr),
-          raw: mapErr,
-        };
-        failed.push({
-          item,
-          ebayPayload: fallbackPayload,
-          error,
-        });
-        continue;
-      }
-
-      const result = await this.singleItemExecutor.execute({ item, ebayPayload });
+    for (const listing of listings) {
+      const result = await this.singleItemExecutor.execute({ listing });
       if ("error" in result) {
         failed.push(result as ExecutionFailed);
       } else {
@@ -86,7 +57,7 @@ export function createMockOnlyBatchListingExecutor(): BatchListingExecutor {
  * Runs the listing batch through the mock-only {@link BatchListingExecutor} boundary.
  */
 export function executeListingsWithMockBatchExecutor(
-  listings: readonly NormalizedInventoryItem[]
+  listings: ExecuteBatchListingsInput
 ): Promise<ExecutionResult> {
-  return createMockOnlyBatchListingExecutor().execute(listings);
+  return createMockOnlyBatchListingExecutor().execute(resolveCanonicalListings(listings));
 }

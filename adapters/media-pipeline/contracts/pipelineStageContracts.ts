@@ -7,15 +7,18 @@ export type { IngestItem, NormalizedInventoryItem } from "../types";
 export type EnrichedInventoryItem = EpidEnrichedInventoryItem;
 
 /**
- * Listing payload at the enrich → execution boundary in `runBatch` (eBay inventory item shape).
- * Distinct from marketplace `ListingItem` in `types.ts` (canonical listing / grouping model).
+ * Single canonical pre-execution listing payload for `runBatch` → executor.
+ * Structural match to `EbayInventoryItem`; distinct from marketplace `ListingItem` in `types.ts`.
  */
-export type ExecutionListingItem = EbayInventoryItem;
+export type CanonicalExecutionListing = EbayInventoryItem;
+
+/** @deprecated Use {@link CanonicalExecutionListing}; retained as an alias for frozen Phase 2 validators. */
+export type ExecutionListingItem = CanonicalExecutionListing;
 
 /** One validated row passed to the batch execution layer (inventory + listing payload). */
 export interface ExecutionInput {
   readonly item: EnrichedInventoryItem;
-  readonly listing: ExecutionListingItem;
+  readonly listing: CanonicalExecutionListing;
 }
 
 export type { ExecutionResult } from "../execution/types";
