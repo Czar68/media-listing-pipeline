@@ -1,5 +1,6 @@
 import type { RunBatchWithTraceResult } from "../runBatch";
 import { runBatch } from "../runBatch";
+import { buildRunArtifact } from "../observability/buildRunArtifact";
 import { MediaAdapterImpl } from "../mediaAdapter";
 import type { ListingDecision } from "../pricing/listingDecisionEngine";
 import { scanBatchRawItems, type ScanBatchOptions } from "../scanner";
@@ -348,9 +349,18 @@ export async function strategyAwareRun(
     events: [...batchResult.trace.events, ...strategyEvents],
   };
 
+  const runArtifact = buildRunArtifact({
+    runId: batchResult.execution.runId,
+    executionBatchId: batchResult.execution.executionBatchId,
+    idempotencyKey: batchResult.execution.idempotencyKey,
+    result: batchResult.execution,
+    trace: [augmentedTrace],
+  });
+
   return {
     ...batchResult,
     trace: augmentedTrace,
+    runArtifact,
     strategiesBySku,
     contractValidation,
     ...(listingDecisionsBySku !== undefined ? { listingDecisionsBySku } : {}),

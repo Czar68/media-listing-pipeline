@@ -20,6 +20,8 @@ import {
   resolvePipelineExecutionPhaseMode,
   validateExecutionEnvironment,
 } from "./contracts/environmentGuard";
+import { buildRunArtifact } from "./observability/buildRunArtifact";
+import type { RunArtifact } from "./observability/runArtifactTypes";
 import {
   type EpidEnrichedInventoryItem,
 } from "./epidEnricher";
@@ -179,6 +181,8 @@ export type RunBatchWithTraceResult = RunBatchResult & {
   readonly trace: ExecutionTrace;
   /** Flat copy of {@link ExecutionTrace.events} for run artifacts / CLI persistence. */
   readonly executionTrace: readonly ExecutionTraceEvent[];
+  /** Structured run snapshot (Phase 6); trace roots share identity with {@link trace}. */
+  readonly runArtifact: RunArtifact;
 } & RunBatchMockSummary;
 
 export interface CanonicalRunBinding {
@@ -445,6 +449,14 @@ export async function runBatch(
     events,
   });
 
+  const runArtifact = buildRunArtifact({
+    runId,
+    executionBatchId,
+    idempotencyKey,
+    result: execution,
+    trace: [trace],
+  });
+
   return {
     rawScanResults,
     normalizedInventoryItems,
@@ -452,6 +464,7 @@ export async function runBatch(
     execution,
     trace,
     executionTrace: trace.events,
+    runArtifact,
     ...mockSummary,
   };
 }

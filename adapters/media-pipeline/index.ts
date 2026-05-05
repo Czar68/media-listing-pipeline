@@ -75,6 +75,9 @@ export { scanBatchRawItems } from "./scanner";
 export type { ScanBatchOptions } from "./scanner";
 export { runBatch } from "./runBatch";
 export type { RunBatchResult, RunBatchWithTraceResult } from "./runBatch";
+export type { RunArtifact } from "./observability/runArtifactTypes";
+export type { BuildRunArtifactInput } from "./observability/buildRunArtifact";
+export { buildRunArtifact } from "./observability/buildRunArtifact";
 export type { ExecutionMode, PipelineExecutionPhaseMode } from "./contracts/environmentGuard";
 export {
   EnvironmentGuardError,
