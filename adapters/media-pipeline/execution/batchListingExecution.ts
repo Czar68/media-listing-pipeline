@@ -1,10 +1,10 @@
 import type { CanonicalExecutionListing } from "../contracts/pipelineStageContracts";
 import type { BatchListingExecutor, ListingExecutionAdapter } from "./executor";
 import { MockExecutor } from "./mockExecutor";
-import type { ExecutionResult, ExecutionSuccess, ExecutionFailed } from "./types";
+import type { ExecutionOutcome, ExecutionSuccess, ExecutionFailed } from "./types";
 
-/** Historical name — same as {@link ExecutionResult}; batch execution is mock-only via `runBatch`. */
-export type ExecuteBatchListingsResult = ExecutionResult;
+/** Historical name — populated {@link ExecutionResult} is assembled in `runBatch`. */
+export type ExecuteBatchListingsResult = import("./types").ExecutionResult;
 
 export type ExecuteBatchListingsInput =
   | readonly CanonicalExecutionListing[]
@@ -32,7 +32,7 @@ function resolveCanonicalListings(input: ExecuteBatchListingsInput): CanonicalEx
 class MockOnlyBatchListingExecutor implements BatchListingExecutor {
   constructor(private readonly singleItemExecutor: ListingExecutionAdapter) {}
 
-  async execute(listings: readonly CanonicalExecutionListing[]): Promise<ExecutionResult> {
+  async execute(listings: readonly CanonicalExecutionListing[]): Promise<ExecutionOutcome> {
     const success: ExecutionSuccess[] = [];
     const failed: ExecutionFailed[] = [];
 
@@ -58,6 +58,6 @@ export function createMockOnlyBatchListingExecutor(): BatchListingExecutor {
  */
 export function executeListingsWithMockBatchExecutor(
   listings: ExecuteBatchListingsInput
-): Promise<ExecutionResult> {
+): Promise<ExecutionOutcome> {
   return createMockOnlyBatchListingExecutor().execute(resolveCanonicalListings(listings));
 }

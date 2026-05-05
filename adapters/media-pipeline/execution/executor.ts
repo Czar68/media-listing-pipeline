@@ -1,4 +1,4 @@
-import type { ExecutionSuccess, ExecutionFailed, ExecutionResult } from './types';
+import type { ExecutionSuccess, ExecutionFailed, ExecutionOutcome } from './types';
 import type { CanonicalExecutionListing } from '../contracts/pipelineStageContracts';
 
 /**
@@ -10,7 +10,7 @@ import type { CanonicalExecutionListing } from '../contracts/pipelineStageContra
 
 /** Batch boundary: map+execute aggregation for canonical pre-execution listings. */
 export interface BatchListingExecutor {
-  execute(listings: readonly CanonicalExecutionListing[]): Promise<ExecutionResult>;
+  execute(listings: readonly CanonicalExecutionListing[]): Promise<ExecutionOutcome>;
 }
 
 export interface ListingExecutionAdapter {

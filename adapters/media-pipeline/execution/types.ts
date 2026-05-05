@@ -45,6 +45,8 @@ export interface ExecutionSuccess {
   };
   /** Structured outcome of the publish step. Always set on success paths. */
   publishResult: PublishResult;
+  /** Deterministic listing-level id from {@link createListingExecutionId} (applied in `runBatch`). */
+  executionId?: string;
   recovered?: boolean;
   retryCount?: number;
 }
@@ -53,6 +55,7 @@ export interface ExecutionFailed {
   item: NormalizedInventoryItem;
   ebayPayload: EbayInventoryItem;
   error: ExecutionError;
+  executionId?: string;
   /**
    * Present when failure occurred at or after the publish step.
    * Absent when failure occurred during inventory PUT or offer POST.
@@ -62,7 +65,23 @@ export interface ExecutionFailed {
   retryCount?: number;
 }
 
-export interface ExecutionResult {
+/** Raw outcome from mock batch executor (`success`/`failed` only). */
+export type ExecutionOutcome = {
   success: ExecutionSuccess[];
   failed: ExecutionFailed[];
+};
+
+/**
+ * Completed batch execution with deterministic identity fields (replay-comparable).
+ * `listings` is the canonical snapshot passed to execution; `executionTrace` mirrors trace events.
+ */
+export interface ExecutionResult extends ExecutionOutcome {
+  readonly runId: string;
+  readonly executionBatchId: string;
+  readonly idempotencyKey: string;
+  readonly mode: "mock";
+  /** True when {@link ExecutionOutcome.failed} is empty. */
+  readonly batchSucceeded: boolean;
+  readonly listings: readonly EbayInventoryItem[];
+  readonly executionTrace: readonly import("../executionTrace").ExecutionTraceEvent[];
 }

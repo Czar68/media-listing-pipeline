@@ -1,12 +1,19 @@
-import { randomUUID } from "crypto";
-import type { ExecutionResult } from "./execution/types";
+import type { ExecutionOutcome, ExecutionResult } from "./execution/types";
 import { executeListingsWithMockBatchExecutor } from "./execution/batchListingExecution";
+import { createDeterministicTraceEvent } from "./execution/deterministicTraceEvent";
 import {
   buildExecutionTrace,
-  createTraceEvent,
   type ExecutionTrace,
   type ExecutionTraceEvent,
+  type ExecutionTraceEventKind,
 } from "./executionTrace";
+import {
+  createDeterministicRunId,
+  createDeterministicRunStartedAt,
+  createExecutionBatchId,
+  createIdempotencyKey,
+  createListingExecutionId,
+} from "./contracts/deterministicExecutionIdentity";
 import {
   type EpidEnrichedInventoryItem,
 } from "./epidEnricher";
@@ -186,9 +193,9 @@ function isCanonicalBindingMap(
  * Sorted by SKU for deterministic trace ordering.
  */
 function appendPublishTraceEvents(
-  runId: string,
-  execution: ExecutionResult,
-  events: ExecutionTraceEvent[]
+  execution: ExecutionOutcome,
+  pushTrace: TracePush,
+  listingExecutionIdForSku: (sku: string) => string
 ): void {
   type PublishRow = { sku: unknown; publishResult: PublishResult };
   const rows: PublishRow[] = [];
@@ -205,8 +212,10 @@ function appendPublishTraceEvents(
   rows.sort((a, b) => String(a.sku).localeCompare(String(b.sku)));
 
   for (const { sku, publishResult } of rows) {
-    events.push(
-      createTraceEvent("TRACE_PUBLISH", runId, {
+    const skuStr = String(sku);
+    pushTrace(
+      "TRACE_PUBLISH",
+      {
         sku,
         offerId: publishResult.offerId,
         publishStatus: publishResult.status,
@@ -214,26 +223,35 @@ function appendPublishTraceEvents(
         ...(publishResult.listingId !== undefined ? { listingId: publishResult.listingId } : {}),
         ...(publishResult.errorCode !== undefined ? { errorCode: publishResult.errorCode } : {}),
         ...(publishResult.errorMessage !== undefined ? { errorMessage: publishResult.errorMessage } : {}),
-      })
+      },
+      listingExecutionIdForSku(skuStr)
     );
   }
 }
 
+type TracePush = (
+  kind: ExecutionTraceEventKind,
+  payload?: Readonly<Record<string, unknown>>,
+  listingExecutionId?: string
+) => void;
+
 function appendErrorAndRecoveryEvents(
-  runId: string,
-  execution: ExecutionResult,
-  events: ExecutionTraceEvent[]
+  execution: ExecutionOutcome,
+  pushTrace: TracePush,
+  listingExecutionIdForSku: (sku: string) => string
 ): void {
   const failedSorted = [...execution.failed].sort((a, b) =>
     String(a.item.sku).localeCompare(String(b.item.sku))
   );
   for (const f of failedSorted) {
-    events.push(
-      createTraceEvent("TRACE_ERROR", runId, {
+    pushTrace(
+      "TRACE_ERROR",
+      {
         sku: f.item.sku,
         message: f.error.message,
         ...(f.error.type !== undefined ? { errorType: f.error.type } : {}),
-      })
+      },
+      listingExecutionIdForSku(String(f.item.sku))
     );
   }
 
@@ -251,11 +269,13 @@ function appendErrorAndRecoveryEvents(
   }
   recoveryRows.sort((a, b) => String(a.sku).localeCompare(String(b.sku)));
   for (const r of recoveryRows) {
-    events.push(
-      createTraceEvent("TRACE_RECOVERY", runId, {
+    pushTrace(
+      "TRACE_RECOVERY",
+      {
         sku: r.sku,
         phase: r.phase,
-      })
+      },
+      listingExecutionIdForSku(String(r.sku))
     );
   }
 }
@@ -284,9 +304,13 @@ export async function runBatch(
     ? maybeScanOptions
     : canonicalBindingOrScanOptions;
 
-  const runId = randomUUID();
-  const runStartedAt = new Date().toISOString();
+  const runId = createDeterministicRunId(items);
+  const runStartedAt = createDeterministicRunStartedAt(runId);
   const events: ExecutionTraceEvent[] = [];
+  let traceSeq = 0;
+  const pushTrace: TracePush = (kind, payload, listingExecutionId) => {
+    events.push(createDeterministicTraceEvent(traceSeq++, kind, runId, payload, listingExecutionId));
+  };
 
   const adapter = new MediaAdapterImpl();
 
@@ -294,11 +318,9 @@ export async function runBatch(
   for (const raw of rawScanResults) {
     validateIngestItem(raw);
   }
-  events.push(
-    createTraceEvent("TRACE_SCAN", runId, {
-      rawCount: rawScanResults.length,
-    })
-  );
+  pushTrace("TRACE_SCAN", {
+    rawCount: rawScanResults.length,
+  });
 
   const normalizedInventoryItems: NormalizedInventoryItem[] = [];
   for (const raw of rawScanResults) {
@@ -307,11 +329,9 @@ export async function runBatch(
     validateNormalizedInventoryItem(normalized);
     normalizedInventoryItems.push(normalized);
   }
-  events.push(
-    createTraceEvent("TRACE_NORMALIZE", runId, {
-      normalizedCount: normalizedInventoryItems.length,
-    })
-  );
+  pushTrace("TRACE_NORMALIZE", {
+    normalizedCount: normalizedInventoryItems.length,
+  });
   for (const row of normalizedInventoryItems) {
     validateNormalizedInventoryItem(row);
   }
@@ -348,6 +368,10 @@ export async function runBatch(
     canonicalExecutionListings.push(listing);
   }
 
+  const executionBatchId = createExecutionBatchId(runId, canonicalExecutionListings);
+  const idempotencyKey = createIdempotencyKey(runId, canonicalExecutionListings);
+  const listingExecutionIdForSku = (sku: string) => createListingExecutionId(runId, sku);
+
   if (canonicalBindingBySku !== null) {
     logDryRunExecutionInputs(
       normalizedInventoryItems,
@@ -356,21 +380,39 @@ export async function runBatch(
     );
   }
 
-  events.push(
-    createTraceEvent("TRACE_EXECUTE", runId, {
-      executionMode: "mock",
-      itemCount: enrichedInventoryItems.length,
-    })
-  );
+  pushTrace("TRACE_EXECUTE", {
+    executionMode: "mock",
+    itemCount: enrichedInventoryItems.length,
+    executionBatchId,
+    idempotencyKey,
+  });
 
-  const execution: ExecutionResult = await executeListingsWithMockBatchExecutor(canonicalExecutionListings);
+  const outcome: ExecutionOutcome = await executeListingsWithMockBatchExecutor(canonicalExecutionListings);
 
-  validateExecutionResult(execution);
+  for (const s of outcome.success) {
+    s.executionId = listingExecutionIdForSku(String(s.item.sku));
+  }
+  for (const f of outcome.failed) {
+    f.executionId = listingExecutionIdForSku(String(f.item.sku));
+  }
+
+  validateExecutionResult(outcome as ExecutionResult);
+
+  appendPublishTraceEvents(outcome, pushTrace, listingExecutionIdForSku);
+  appendErrorAndRecoveryEvents(outcome, pushTrace, listingExecutionIdForSku);
+
+  const execution: ExecutionResult = {
+    ...outcome,
+    runId,
+    executionBatchId,
+    idempotencyKey,
+    mode: "mock",
+    batchSucceeded: outcome.failed.length === 0,
+    listings: [...canonicalExecutionListings],
+    executionTrace: events,
+  };
 
   const mockSummary = buildRunBatchMockSummary(execution);
-
-  appendPublishTraceEvents(runId, execution, events);
-  appendErrorAndRecoveryEvents(runId, execution, events);
 
   const trace = buildExecutionTrace({
     runId,
