@@ -17,9 +17,14 @@ import {
 import {
   assertNoProductionExecution,
   EnvironmentGuardError,
+  detectProductionIntent,
   resolvePipelineExecutionPhaseMode,
   validateExecutionEnvironment,
 } from "./contracts/environmentGuard";
+import {
+  gateProductionExecutionAttemptBlocked,
+  ProductionGuardError,
+} from "./contracts/productionGuard";
 import { buildRunArtifact } from "./observability/buildRunArtifact";
 import type { RunArtifact } from "./observability/runArtifactTypes";
 import {
@@ -392,6 +397,18 @@ export async function runBatch(
 
   const pipelineExecutionMode = ((): Exclude<ExecutionResult["mode"], "blocked"> => {
     try {
+      if (detectProductionIntent()) {
+        gateProductionExecutionAttemptBlocked({
+          runId,
+          executionBatchId,
+          pushProductionBlockTrace: (reason, attempted) => {
+            pushTrace("TRACE_PRODUCTION_BLOCK", {
+              reason,
+              attempted,
+            });
+          },
+        });
+      }
       const m = resolvePipelineExecutionPhaseMode();
       validateExecutionEnvironment(m);
       assertNoProductionExecution();
@@ -402,6 +419,9 @@ export async function runBatch(
           mode: e.mode,
           reason: e.message,
         });
+        e.partialExecutionTrace = [...events];
+      }
+      if (e instanceof ProductionGuardError) {
         e.partialExecutionTrace = [...events];
       }
       throw e;

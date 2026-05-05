@@ -82,9 +82,17 @@ export type { ExecutionMode, PipelineExecutionPhaseMode } from "./contracts/envi
 export {
   EnvironmentGuardError,
   assertNoProductionExecution,
+  detectProductionIntent,
   validateExecutionEnvironment,
   resolvePipelineExecutionPhaseMode,
 } from "./contracts/environmentGuard";
+export type { ProductionUnlockConfig } from "./contracts/productionGuard";
+export {
+  ProductionGuardError,
+  expectedProductionConfirmationToken,
+  gateProductionExecutionAttemptBlocked,
+  readProductionUnlockConfigFromEnv,
+} from "./contracts/productionGuard";
 export type {
   ExecutionTrace,
   ExecutionTraceEvent,

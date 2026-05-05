@@ -11,7 +11,9 @@ export type ExecutionTraceEventKind =
   /** Pre-execution listing strategy chosen per SKU (strategy layer; does not change executor). */
   | "TRACE_STRATEGY"
   /** Environment guard blocked execution before batch executor ran. */
-  | "TRACE_ENV_BLOCK";
+  | "TRACE_ENV_BLOCK"
+  /** Production readiness evaluated; execution remains disabled (Phase 7). */
+  | "TRACE_PRODUCTION_BLOCK";
 
 export interface ExecutionTraceEvent {
   readonly kind: ExecutionTraceEventKind;
