@@ -1,5 +1,6 @@
 import type { NormalizedInventoryItem } from '../types';
 import type { EbayInventoryItem } from '../ebayMapper';
+import type { ExecutionMode } from '../contracts/environmentGuard';
 
 /**
  * Strict execution result contract shared by all executors
@@ -79,7 +80,7 @@ export interface ExecutionResult extends ExecutionOutcome {
   readonly runId: string;
   readonly executionBatchId: string;
   readonly idempotencyKey: string;
-  readonly mode: "mock";
+  readonly mode: Exclude<ExecutionMode, "blocked">;
   /** True when {@link ExecutionOutcome.failed} is empty. */
   readonly batchSucceeded: boolean;
   readonly listings: readonly EbayInventoryItem[];

@@ -22,6 +22,7 @@ export interface ExecutionInput {
 }
 
 export type { ExecutionResult } from "../execution/types";
+export type { ExecutionMode, PipelineExecutionPhaseMode } from "./environmentGuard";
 
 export type PipelineStageValidationDetail = {
   readonly stage: string;

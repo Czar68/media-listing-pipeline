@@ -75,6 +75,13 @@ export { scanBatchRawItems } from "./scanner";
 export type { ScanBatchOptions } from "./scanner";
 export { runBatch } from "./runBatch";
 export type { RunBatchResult, RunBatchWithTraceResult } from "./runBatch";
+export type { ExecutionMode, PipelineExecutionPhaseMode } from "./contracts/environmentGuard";
+export {
+  EnvironmentGuardError,
+  assertNoProductionExecution,
+  validateExecutionEnvironment,
+  resolvePipelineExecutionPhaseMode,
+} from "./contracts/environmentGuard";
 export type {
   ExecutionTrace,
   ExecutionTraceEvent,

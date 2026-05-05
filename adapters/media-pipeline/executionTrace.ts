@@ -9,7 +9,9 @@ export type ExecutionTraceEventKind =
   /** Per-SKU publish outcome: offerId, status (PUBLISHED | FAILED), httpStatus, optional errorCode/errorMessage. */
   | "TRACE_PUBLISH"
   /** Pre-execution listing strategy chosen per SKU (strategy layer; does not change executor). */
-  | "TRACE_STRATEGY";
+  | "TRACE_STRATEGY"
+  /** Environment guard blocked execution before batch executor ran. */
+  | "TRACE_ENV_BLOCK";
 
 export interface ExecutionTraceEvent {
   readonly kind: ExecutionTraceEventKind;

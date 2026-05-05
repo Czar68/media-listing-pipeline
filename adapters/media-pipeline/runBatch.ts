@@ -15,6 +15,12 @@ import {
   createListingExecutionId,
 } from "./contracts/deterministicExecutionIdentity";
 import {
+  assertNoProductionExecution,
+  EnvironmentGuardError,
+  resolvePipelineExecutionPhaseMode,
+  validateExecutionEnvironment,
+} from "./contracts/environmentGuard";
+import {
   type EpidEnrichedInventoryItem,
 } from "./epidEnricher";
 import type { CanonicalExecutionListing } from "./contracts/pipelineStageContracts";
@@ -141,7 +147,7 @@ export type RunBatchMockSummary = {
   readonly success: boolean;
   readonly listings: readonly RunBatchListingRow[];
   readonly failures: readonly RunBatchFailureRow[];
-  readonly mode: "mock";
+  readonly mode: Exclude<ExecutionResult["mode"], "blocked">;
 };
 
 function buildRunBatchMockSummary(execution: ExecutionResult): RunBatchMockSummary {
@@ -164,7 +170,7 @@ function buildRunBatchMockSummary(execution: ExecutionResult): RunBatchMockSumma
     success: failures.length === 0,
     listings,
     failures,
-    mode: "mock",
+    mode: execution.mode,
   };
 }
 
@@ -380,8 +386,26 @@ export async function runBatch(
     );
   }
 
+  const pipelineExecutionMode = ((): Exclude<ExecutionResult["mode"], "blocked"> => {
+    try {
+      const m = resolvePipelineExecutionPhaseMode();
+      validateExecutionEnvironment(m);
+      assertNoProductionExecution();
+      return m;
+    } catch (e) {
+      if (e instanceof EnvironmentGuardError) {
+        pushTrace("TRACE_ENV_BLOCK", {
+          mode: e.mode,
+          reason: e.message,
+        });
+        e.partialExecutionTrace = [...events];
+      }
+      throw e;
+    }
+  })();
+
   pushTrace("TRACE_EXECUTE", {
-    executionMode: "mock",
+    executionMode: pipelineExecutionMode,
     itemCount: enrichedInventoryItems.length,
     executionBatchId,
     idempotencyKey,
@@ -406,7 +430,7 @@ export async function runBatch(
     runId,
     executionBatchId,
     idempotencyKey,
-    mode: "mock",
+    mode: pipelineExecutionMode,
     batchSucceeded: outcome.failed.length === 0,
     listings: [...canonicalExecutionListings],
     executionTrace: events,
