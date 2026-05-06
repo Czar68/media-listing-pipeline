@@ -2,10 +2,8 @@ import type { ExecutionSuccess, ExecutionFailed, ExecutionOutcome } from './type
 import type { CanonicalExecutionListing } from '../contracts/pipelineStageContracts';
 
 /**
- * Execution interface for listing adapters
- * Allows swapping between real implementations (eBay) and mock implementations
- * Executors handle SINGLE ITEM ONLY - no batch responsibility
- * Returns per-item result (success or failed)
+ * Mock-only listing execution: single-item adapters and batch aggregation for canonical listings.
+ * Per-item executors return success or failed rows only.
  */
 
 /** Batch boundary: map+execute aggregation for canonical pre-execution listings. */

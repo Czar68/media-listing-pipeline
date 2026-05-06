@@ -1,8 +1,9 @@
 /**
  * Legacy vs canonical pipeline isolation.
  *
- * Canonical execution path: `runBatch` → EPID projection → `ebayMapper` → mock batch executor → `MockExecutor`.
- * Legacy: `runMediaPipeline`, `runPipeline`, and listing-builder modules — not wired from repo scripts.
+ * Canonical batch execution path: `run_pipeline` (CLI) → `runBatch` → EPID projection → `ebayMapper` →
+ * `MockOnlyBatchListingExecutor` → `MockExecutor`.
+ * Other surfaces (`runMediaPipeline`, listing builders) are separate entrypoints, not this batch path.
  */
 
 let legacyInvocationCount = 0;

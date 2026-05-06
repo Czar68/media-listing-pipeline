@@ -1,10 +1,11 @@
+/**
+ * Mock-only batch listing execution (`MockOnlyBatchListingExecutor` → `MockExecutor`).
+ * Completed {@link import("./types").ExecutionResult} is assembled in `runBatch`.
+ */
 import type { CanonicalExecutionListing } from "../contracts/pipelineStageContracts";
 import type { BatchListingExecutor, ListingExecutionAdapter } from "./executor";
 import { MockExecutor } from "./mockExecutor";
 import type { ExecutionOutcome, ExecutionSuccess, ExecutionFailed } from "./types";
-
-/** Historical name — populated {@link ExecutionResult} is assembled in `runBatch`. */
-export type ExecuteBatchListingsResult = import("./types").ExecutionResult;
 
 export type ExecuteBatchListingsInput =
   | readonly CanonicalExecutionListing[]

@@ -21,9 +21,9 @@ export interface ExecutionInput {
   readonly listing: CanonicalExecutionListing;
 }
 
-export type { ExecutionResult } from "../execution/types";
-export type { ExecutionMode, PipelineExecutionPhaseMode } from "./environmentGuard";
-export type { ProductionUnlockConfig } from "./productionGuard";
+/** `ExecutionResult` — single canonical definition: `../execution/types`. */
+/** `ExecutionMode` / `PipelineExecutionPhaseMode` — single canonical definition: `./environmentGuard`. */
+/** `ProductionUnlockConfig` — single canonical definition: `./productionGuard`. */
 
 export type PipelineStageValidationDetail = {
   readonly stage: string;

@@ -87,12 +87,12 @@ export {
   resolvePipelineExecutionPhaseMode,
 } from "./contracts/environmentGuard";
 export type { ProductionUnlockConfig } from "./contracts/productionGuard";
-export {
-  ProductionGuardError,
-  expectedProductionConfirmationToken,
-  gateProductionExecutionAttemptBlocked,
-  readProductionUnlockConfigFromEnv,
-} from "./contracts/productionGuard";
+export { ProductionGuardError, expectedProductionConfirmationToken } from "./contracts/productionGuard";
+export type {
+  CanonicalExecutionListing,
+  ExecutionInput,
+  ExecutionListingItem,
+} from "./contracts/pipelineStageContracts";
 export type {
   ExecutionTrace,
   ExecutionTraceEvent,
@@ -116,7 +116,7 @@ export type {
   ExecutionFailed,
   ExecutionError,
 } from "./execution/types";
-export type { ExecuteBatchListingsResult, ExecuteBatchListingsInput } from "./execution/batchListingExecution";
+export type { ExecuteBatchListingsInput } from "./execution/batchListingExecution";
 export {
   strategyAwareRun,
   selectListingStrategy,
