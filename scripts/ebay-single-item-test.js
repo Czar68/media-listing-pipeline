@@ -21,7 +21,8 @@ const {
   validateNoProdLeakage,
   assertEbaySandboxCredentialsPresent,
 } = require("./ebay-prod-safety.js");
-const { runBatch, toEbayInventoryItem } = require("@media-listing/adapters-media-pipeline");
+const { runBatch } = require("../adapters/media-pipeline/dist/runBatch");
+const { toEbayInventoryItem } = require("../adapters/media-pipeline/dist/ebayMapper");
 
 const FIXED_CAPTURED_AT = "2026-01-15T12:00:00.000Z";
 const SINGLE_SOURCE = "ebay-single-item-test";

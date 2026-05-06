@@ -5,7 +5,9 @@ import { MediaAdapterImpl } from "../mediaAdapter";
 import type { ListingDecision } from "../pricing/listingDecisionEngine";
 import { scanBatchRawItems, type ScanBatchOptions } from "../scanner";
 import type { NormalizedInventoryItem } from "../types";
+import type { ExecutionResult } from "../execution/types";
 import {
+  countRecoveredInExecution,
   createTraceEvent,
   type ExecutionTrace,
   type ExecutionTraceEvent,
@@ -344,22 +346,36 @@ export async function strategyAwareRun(
     })
   );
 
+  const augmentedEvents: ExecutionTraceEvent[] = [...batchResult.trace.events, ...strategyEvents];
+  const execution: ExecutionResult = {
+    ...batchResult.execution,
+    executionTrace: augmentedEvents,
+  };
+  const recoveredCount = countRecoveredInExecution(execution);
   const augmentedTrace: ExecutionTrace = {
-    ...batchResult.trace,
-    events: [...batchResult.trace.events, ...strategyEvents],
+    runId: batchResult.trace.runId,
+    timestamp: batchResult.trace.timestamp,
+    items: [execution],
+    summary: {
+      successCount: execution.success.length,
+      failedCount: execution.failed.length,
+      recoveredCount,
+    },
+    events: augmentedEvents,
   };
 
   const runArtifact = buildRunArtifact({
-    runId: batchResult.execution.runId,
-    executionBatchId: batchResult.execution.executionBatchId,
-    idempotencyKey: batchResult.execution.idempotencyKey,
-    result: batchResult.execution,
-    trace: [augmentedTrace],
+    runId: execution.runId,
+    executionBatchId: execution.executionBatchId,
+    idempotencyKey: execution.idempotencyKey,
+    result: execution,
   });
 
   return {
     ...batchResult,
+    execution,
     trace: augmentedTrace,
+    executionTrace: augmentedEvents,
     runArtifact,
     strategiesBySku,
     contractValidation,

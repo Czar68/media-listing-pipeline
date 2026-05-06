@@ -186,7 +186,7 @@ export type RunBatchWithTraceResult = RunBatchResult & {
   readonly trace: ExecutionTrace;
   /** Flat copy of {@link ExecutionTrace.events} for run artifacts / CLI persistence. */
   readonly executionTrace: readonly ExecutionTraceEvent[];
-  /** Structured run snapshot (Phase 6); trace roots share identity with {@link trace}. */
+  /** Structured run snapshot; {@link RunArtifact.trace} is the same reference as {@link ExecutionResult.executionTrace}. */
   readonly runArtifact: RunArtifact;
 } & RunBatchMockSummary;
 
@@ -474,7 +474,6 @@ export async function runBatch(
     executionBatchId,
     idempotencyKey,
     result: execution,
-    trace: [trace],
   });
 
   return {

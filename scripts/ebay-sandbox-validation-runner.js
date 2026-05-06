@@ -17,7 +17,7 @@ if (dotenvResult.error) {
   console.log("[sandbox-validation] dotenv loaded:", envPath, "exists:", fs.existsSync(envPath));
 }
 
-const { runBatch } = require("@media-listing/adapters-media-pipeline");
+const { runBatch } = require("../adapters/media-pipeline/dist/runBatch");
 const {
   validateNoProdLeakage,
   assertEbaySandboxCredentialsPresent,

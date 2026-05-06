@@ -1,8 +1,5 @@
 /**
- * Parity test to ensure MockExecutor produces per-item results with correct structure
- * This tests structure only (deep shape match), not values
- * Validates that both executors return identical per-item contract
- * NO batch-level assumptions - executor handles single item only
+ * Structure check: {@link MockExecutor} per-item success/failure row shapes (deep shape only, no live API).
  */
 
 import { MockExecutor } from './mockExecutor';

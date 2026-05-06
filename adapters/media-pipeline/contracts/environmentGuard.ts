@@ -1,5 +1,5 @@
 /**
- * Phase 5: hard execution environment gates (mock-default, sandbox opt-in, production blocked).
+ * Execution environment gates: mock default, sandbox opt-in, production intent routed separately.
  */
 
 export type ExecutionMode = "mock" | "sandbox" | "blocked";
@@ -83,12 +83,12 @@ export function validateExecutionEnvironment(mode: ExecutionMode): void {
 
 /**
  * Production API targets are evaluated only via {@link detectProductionIntent} and
- * `productionGuard.gateProductionExecutionAttemptBlocked` in `runBatch` (Phase 7).
+ * `productionGuard.gateProductionExecutionAttemptBlocked` in `runBatch`.
  */
 export function assertNoProductionExecution(): void {}
 
 /**
- * True when execution is explicitly aimed at production (Phase 7 production readiness gate).
+ * True when execution is explicitly aimed at production.
  *
  * Routed through `contracts/productionGuard` — still throws before any batch executor runs.
  */

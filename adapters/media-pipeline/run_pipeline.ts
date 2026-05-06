@@ -2,7 +2,9 @@ import fs from "fs";
 import type { ImageFolder } from "./imageIngest";
 import type { CanonicalMarket } from "./types";
 import type { PipelineRunCliConfig } from "./cli";
-import { runBatch, type CanonicalRunBinding, type RunBatchFailureRow, type RunBatchListingRow } from "./runBatch";
+import { runBatch, type CanonicalRunBinding } from "./runBatch";
+import type { ExecutionResult } from "./execution/types";
+import type { RunArtifact } from "./observability/runArtifactTypes";
 
 export type MediaPipelineInput = {
   readonly markets: readonly CanonicalMarket[];
@@ -18,7 +20,7 @@ export function validateMediaPipelineInput(input: unknown): asserts input is Med
     throw new Error("Media pipeline input must include a markets array");
   }
   if (o.imageFolders !== undefined && !Array.isArray(o.imageFolders)) {
-    throw new Error("Media pipeline input imageFolders must be an array when provided");
+    throw new Error("Media pipeline input imageFolders must be an array when present");
   }
 }
 
@@ -32,17 +34,11 @@ export function runPipeline(input: MediaPipelineInput): {
   };
 }
 
-export type RunPipelineForCliResultBody = {
-  readonly success: boolean;
-  readonly listings: readonly RunBatchListingRow[];
-  readonly failures: readonly RunBatchFailureRow[];
-  readonly mode: "mock";
-};
-
 export type RunPipelineForCliOk = {
   readonly ok: true;
   readonly config: PipelineRunCliConfig;
-  readonly result: RunPipelineForCliResultBody;
+  readonly result: ExecutionResult;
+  readonly runArtifact: RunArtifact;
 };
 
 function parseCanonicalBindingRecord(value: unknown): ReadonlyMap<string, CanonicalRunBinding> | null {
@@ -89,12 +85,23 @@ function parseCliBatchInputJson(raw: unknown): {
   };
 }
 
+function applyCliExecutionMode(config: PipelineRunCliConfig): void {
+  const mode = config.mode.trim().toLowerCase();
+  if (mode === "sandbox") {
+    process.env.EXECUTION_MODE = "sandbox";
+    process.env.ENABLE_SANDBOX = "true";
+  } else {
+    process.env.EXECUTION_MODE = "mock";
+    delete process.env.ENABLE_SANDBOX;
+  }
+}
+
 /**
- * CLI batch path: forces {@link process.env.EXECUTION_MODE} to `"mock"`, loads batch JSON from disk,
- * runs {@link runBatch}, and returns a structured summary (no direct CLI parsing).
+ * CLI batch path: applies {@link config.mode} to execution env, loads batch JSON from disk,
+ * runs {@link runBatch}, returns {@link ExecutionResult} and {@link RunArtifact}.
  */
 export async function runPipelineForCliConfig(config: PipelineRunCliConfig): Promise<RunPipelineForCliOk> {
-  process.env.EXECUTION_MODE = "mock";
+  applyCliExecutionMode(config);
   const rawText = fs.readFileSync(config.input, "utf8");
   const rawJson: unknown = JSON.parse(rawText);
   const { items, canonicalBindingBySku } = parseCliBatchInputJson(rawJson);
@@ -102,17 +109,14 @@ export async function runPipelineForCliConfig(config: PipelineRunCliConfig): Pro
     canonicalBindingBySku === null
       ? await runBatch(items)
       : await runBatch(items, canonicalBindingBySku);
-  if (batchResult.mode !== "mock") {
-    throw new Error("Pipeline CLI expected mock execution mode");
+  const expectedMode = config.mode.trim().toLowerCase() === "sandbox" ? "sandbox" : "mock";
+  if (batchResult.execution.mode !== expectedMode) {
+    throw new Error(`Pipeline CLI expected execution mode ${expectedMode}`);
   }
   return {
     ok: true,
     config,
-    result: {
-      success: batchResult.success,
-      listings: batchResult.listings,
-      failures: batchResult.failures,
-      mode: "mock",
-    },
+    result: batchResult.execution,
+    runArtifact: batchResult.runArtifact,
   };
 }

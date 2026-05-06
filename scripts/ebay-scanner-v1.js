@@ -1,11 +1,10 @@
 // ========================================
-// EBAY SCANNER V1 — PHASE 1 (PRODUCTION CORE)
-// Single-item deterministic listing compiler
+// EBAY SCANNER V1 — single-item deterministic listing compiler
 //
 // Batch path (runBatch): scanner → mediaAdapter.normalize → ebayMapper → api/ebayClient.request()
 // ========================================
 
-const { runBatch: runInventoryBatch } = require("@media-listing/adapters-media-pipeline");
+const { runBatch: runInventoryBatch } = require("../adapters/media-pipeline/dist/runBatch");
 
 const CONFIG = {
   EBAY_FEE_RATE: 0.153,

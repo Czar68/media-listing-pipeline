@@ -3,13 +3,13 @@
  *
  * Canonical batch execution path: `run_pipeline` (CLI) → `runBatch` → EPID projection → `ebayMapper` →
  * `MockOnlyBatchListingExecutor` → `MockExecutor`.
- * Other surfaces (`runMediaPipeline`, listing builders) are separate entrypoints, not this batch path.
+ * Other surfaces (`marketMediaPipeline.runMediaPipeline`, listing builders) are separate entrypoints, not this batch path.
  */
 
 let legacyInvocationCount = 0;
 
 /**
- * Non-blocking: logs when legacy entrypoints run (`runMediaPipeline`), only if
+ * Non-blocking: logs when legacy entrypoints run (`runMediaPipeline` / marketplace path), only if
  * `NODE_ENV=development` or `MEDIA_LISTING_LEGACY_GUARD=1`.
  */
 export function notifyLegacyPipelineInvocation(entryPoint: string): void {

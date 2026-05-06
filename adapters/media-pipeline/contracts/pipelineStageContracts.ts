@@ -1,3 +1,12 @@
+/**
+ * @file Contract map: each exported type points at a single canonical definition (no parallel aliases).
+ *
+ * - `IngestItem` / `NormalizedInventoryItem` → `../types`
+ * - `CanonicalExecutionListing` → same structural type as `../ebayMapper.EbayInventoryItem` (semantic name for execution payloads)
+ * - `ExecutionResult` → `../execution/types`
+ * - `ExecutionMode` → `./environmentGuard`
+ * - `ProductionUnlockConfig` / `ProductionGuardError` → `./productionGuard`
+ */
 import type { EpidEnrichedInventoryItem } from "../epidEnricher";
 import type { EbayInventoryItem } from "../ebayMapper";
 
@@ -6,24 +15,14 @@ export type { IngestItem, NormalizedInventoryItem } from "../types";
 /** EPID-enriched row after the enrich stage (canonical projection or catalog enrich). */
 export type EnrichedInventoryItem = EpidEnrichedInventoryItem;
 
-/**
- * Single canonical pre-execution listing payload for `runBatch` → executor.
- * Structural match to `EbayInventoryItem`; distinct from marketplace `ListingItem` in `types.ts`.
- */
+/** Pre-execution listing row for `runBatch` → mock executor; structural alias of `EbayInventoryItem`. */
 export type CanonicalExecutionListing = EbayInventoryItem;
-
-/** @deprecated Use {@link CanonicalExecutionListing}; retained as an alias for frozen Phase 2 validators. */
-export type ExecutionListingItem = CanonicalExecutionListing;
 
 /** One validated row passed to the batch execution layer (inventory + listing payload). */
 export interface ExecutionInput {
   readonly item: EnrichedInventoryItem;
   readonly listing: CanonicalExecutionListing;
 }
-
-/** `ExecutionResult` — single canonical definition: `../execution/types`. */
-/** `ExecutionMode` / `PipelineExecutionPhaseMode` — single canonical definition: `./environmentGuard`. */
-/** `ProductionUnlockConfig` — single canonical definition: `./productionGuard`. */
 
 export type PipelineStageValidationDetail = {
   readonly stage: string;

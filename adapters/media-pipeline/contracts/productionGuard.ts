@@ -20,7 +20,7 @@ export function expectedProductionConfirmationToken(runId: string, executionBatc
 }
 
 /**
- * Thrown when a production execution path is evaluated; execution never proceeds in Phase 7.
+ * Thrown when a production execution path is evaluated; execution never proceeds under current policy.
  * Shape: `{ stage: "production_guard", error, blocked: true, mode: "production" }` via {@link toStructured}.
  */
 export class ProductionGuardError extends Error {
@@ -82,6 +82,6 @@ export function gateProductionExecutionAttemptBlocked(params: {
     throw new ProductionGuardError("production_guard_blocked: confirmation token mismatch");
   }
 
-  pushProductionBlockTrace("production execution disabled in Phase 7", true);
-  throw new ProductionGuardError("production execution disabled in Phase 7");
+  pushProductionBlockTrace("production execution disabled by policy", true);
+  throw new ProductionGuardError("production execution disabled by policy");
 }

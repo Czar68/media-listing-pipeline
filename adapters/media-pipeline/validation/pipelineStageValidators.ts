@@ -2,9 +2,9 @@ import type { EbayInventoryItem, EbayListingCondition } from "../ebayMapper";
 import type { ExecutionFailed, ExecutionResult, ExecutionSuccess } from "../execution/types";
 import {
   PipelineStageValidationError,
+  type CanonicalExecutionListing,
   type EnrichedInventoryItem,
   type ExecutionInput,
-  type ExecutionListingItem,
   type IngestItem,
   type NormalizedInventoryItem,
 } from "../contracts/pipelineStageContracts";
@@ -143,7 +143,7 @@ export function validateEnrichedInventoryItem(payload: unknown): asserts payload
   }
 }
 
-export function validateListingItem(payload: unknown): asserts payload is ExecutionListingItem {
+export function validateListingItem(payload: unknown): asserts payload is CanonicalExecutionListing {
   if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
     throwStage("listing", "Listing payload must be a non-null object", payload);
   }

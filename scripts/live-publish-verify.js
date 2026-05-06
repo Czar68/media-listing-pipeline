@@ -30,7 +30,7 @@ if (dotenvResult.error) {
 process.env.EXECUTION_MODE = "ebay";
 process.env.EBAY_ENV = "sandbox";
 
-const { runBatch } = require("@media-listing/adapters-media-pipeline");
+const { runBatch } = require("../adapters/media-pipeline/dist/runBatch");
 const {
   validateNoProdLeakage,
   assertEbaySandboxCredentialsPresent,

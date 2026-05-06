@@ -12,7 +12,7 @@ export type ExecutionTraceEventKind =
   | "TRACE_STRATEGY"
   /** Environment guard blocked execution before batch executor ran. */
   | "TRACE_ENV_BLOCK"
-  /** Production readiness evaluated; execution remains disabled (Phase 7). */
+  /** Production readiness evaluated; execution remains disabled. */
   | "TRACE_PRODUCTION_BLOCK";
 
 export interface ExecutionTraceEvent {

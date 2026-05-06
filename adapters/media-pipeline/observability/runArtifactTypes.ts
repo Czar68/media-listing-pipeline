@@ -1,11 +1,8 @@
 import type { ExecutionFailed, ExecutionResult, ExecutionSuccess } from "../execution/types";
-import type { ExecutionTrace } from "../executionTrace";
+import type { ExecutionTraceEvent } from "../executionTrace";
 
 /**
- * Replay-comparable structured snapshot for a completed batch run (Phase 6).
- *
- * Listing rows reuse the same array references as {@link ExecutionResult.success} / `.failed`;
- * orchestration traces reuse the supplied {@link ExecutionTrace} roots (no cloning).
+ * In-memory run snapshot: listing rows and `trace` share references with {@link ExecutionResult}.
  */
 
 export interface RunArtifact {
@@ -26,7 +23,8 @@ export interface RunArtifact {
     readonly failed: readonly ExecutionFailed[];
   };
 
-  readonly trace: readonly ExecutionTrace[];
+  /** Same reference as {@link ExecutionResult.executionTrace}. */
+  readonly trace: readonly ExecutionTraceEvent[];
 
   readonly metadata: {
     readonly mode: ExecutionResult["mode"];
