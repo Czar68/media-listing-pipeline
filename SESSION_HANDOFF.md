@@ -24,3 +24,12 @@ Current known state (2026-05-10):
   EBAY_REFRESH_TOKEN_SANDBOX, EBAY_FULFILLMENT_POLICY_ID, EBAY_PAYMENT_POLICY_ID,
   EBAY_RETURN_POLICY_ID, EBAY_MERCHANT_LOCATION_KEY
 ---
+
+When writing Cursor prompts, always end with this output format instruction:
+"When done, report in this format only:
+RESULT: PASS or FAIL
+FILES_MODIFIED: list only
+TESTS: pass count and fail count
+COMMIT: hash and message
+NEXT_ACTION: one sentence
+ERRORS: any errors or NONE"
