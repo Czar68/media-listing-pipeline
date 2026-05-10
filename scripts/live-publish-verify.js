@@ -6,7 +6,7 @@
  * Objective: Prove that the eBay executor produces a REAL published listing
  * and that TRACE_PUBLISH matches actual marketplace state.
  *
- * Uses existing runBatch pipeline. EXECUTION_MODE=ebay is forced below.
+ * Uses existing runBatch pipeline. EXECUTION_MODE=sandbox plus ENABLE_SANDBOX=true below.
  * canonicalBindingBySku is required by runBatch to pass items through the
  * enrichment gate into executeBatchListings. The EPID value itself is not
  * forwarded to the eBay API (buildInventoryRequestBody omits it) — only the
@@ -26,8 +26,9 @@ if (dotenvResult.error) {
   console.log("[live-publish-verify] dotenv loaded:", envPath, "| exists:", fs.existsSync(envPath));
 }
 
-// Force eBay executor and sandbox env
-process.env.EXECUTION_MODE = "ebay";
+// Sandbox single-item executor + runBatch sandbox gate (ENABLE_SANDBOX)
+process.env.EXECUTION_MODE = "sandbox";
+process.env.ENABLE_SANDBOX = "true";
 process.env.EBAY_ENV = "sandbox";
 
 const { runBatch } = require("../adapters/media-pipeline/dist/runBatch");
@@ -155,7 +156,7 @@ async function main() {
   // ----------------------------------------------------------------
   // 3. EXECUTE runBatch (single item)
   // ----------------------------------------------------------------
-  console.log("\n━━━ 3. EXECUTING runBatch (single item, EXECUTION_MODE=ebay) ━━━━\n");
+  console.log("\n━━━ 3. EXECUTING runBatch (single item, EXECUTION_MODE=sandbox) ━━━━\n");
 
   let result;
   try {

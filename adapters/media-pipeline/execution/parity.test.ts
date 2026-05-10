@@ -45,7 +45,7 @@ async function testParity() {
 
   // Test SINGLE ITEM execution (no batch)
   console.log('Testing per-item execution...');
-  const result = await mockExecutor.execute({ listing });
+  const result = await mockExecutor.execute(listing);
   console.log('Per-item result:', JSON.stringify(result, null, 2));
 
   // Validate result is either ExecutionSuccess or ExecutionFailed

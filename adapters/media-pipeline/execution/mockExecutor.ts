@@ -1,6 +1,6 @@
 import type { CanonicalExecutionListing } from '../contracts/pipelineStageContracts';
 import { ListingExecutionAdapter } from './executor';
-import type { ExecutionSuccess, PublishResult } from './types';
+import type { ExecutionFailed, ExecutionSuccess, PublishResult } from './types';
 import { normalizedInventoryItemFromCanonicalListing } from './canonicalListingBridge';
 
 /**
@@ -11,8 +11,7 @@ import { normalizedInventoryItemFromCanonicalListing } from './canonicalListingB
  * Output structure matches eBay executor exactly for parity
  */
 export class MockExecutor implements ListingExecutionAdapter {
-  async execute(input: { listing: CanonicalExecutionListing }): Promise<ExecutionSuccess> {
-    const { listing: ebayPayload } = input;
+  async execute(ebayPayload: CanonicalExecutionListing): Promise<ExecutionSuccess | ExecutionFailed> {
     const item = normalizedInventoryItemFromCanonicalListing(ebayPayload);
 
     const response = await this.createInventoryItem(ebayPayload);

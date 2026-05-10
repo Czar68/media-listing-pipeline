@@ -147,7 +147,7 @@ function classifyExpectations(execution: ExecutionResult): {
 
 /**
  * Controlled adversarial validation: deterministic dataset, mock executor EPID A/B,
- * then ebay executor with a harness-only `ebayClient` stub (no pipeline source edits).
+ * then sandbox `EbayExecutor` with a harness-only `ebayClient` stub.
  */
 export async function runAdversarialValidation(): Promise<AdversarialValidationOutput> {
   const inputs = createAdversarialBatchInputs();
@@ -164,7 +164,7 @@ export async function runAdversarialValidation(): Promise<AdversarialValidationO
     executorRetryPolicy: EXECUTOR_RETRY_POLICY_LABEL,
   });
 
-  const envKeys = ["EXECUTION_MODE", "EBAY_APP_TOKEN"] as const;
+  const envKeys = ["EXECUTION_MODE", "EBAY_APP_TOKEN", "ENABLE_SANDBOX"] as const;
   const saved = cloneEnv(envKeys);
 
   const authSku = expectedSku(DEFAULT_SOURCE, ADVERSARIAL_EXTERNAL_IDS.auth);
@@ -206,7 +206,8 @@ export async function runAdversarialValidation(): Promise<AdversarialValidationO
     ].join(" | ");
 
     const stub = installEbayClientStubForValidation();
-    process.env.EXECUTION_MODE = "ebay";
+    process.env.EXECUTION_MODE = "sandbox";
+    process.env.ENABLE_SANDBOX = "true";
     delete process.env.EBAY_APP_TOKEN;
 
     let runEbay!: RunBatchWithTraceResult;
@@ -240,7 +241,7 @@ export async function runAdversarialValidation(): Promise<AdversarialValidationO
         summary: epidSummary,
       },
       ebayExecutorAdversarial: {
-        executionMode: "ebay",
+        executionMode: "sandbox",
         successFailureRates: successFailureRates(runEbay.execution),
         errorTypeDistribution: countErrorTypes(runEbay.execution),
         recovery: recoveryStats(runEbay.execution),

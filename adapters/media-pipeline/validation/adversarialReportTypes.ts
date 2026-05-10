@@ -38,7 +38,7 @@ export interface AdversarialValidationReport {
     readonly summary: string;
   };
   readonly ebayExecutorAdversarial: {
-    readonly executionMode: "ebay";
+    readonly executionMode: "sandbox";
     readonly successFailureRates: ReturnType<typeof successFailureRates>;
     readonly errorTypeDistribution: ReturnType<typeof countErrorTypes>;
     readonly recovery: ReturnType<typeof recoveryStats>;

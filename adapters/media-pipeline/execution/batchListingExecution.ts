@@ -1,10 +1,10 @@
 /**
- * Mock-only batch listing execution (`MockOnlyBatchListingExecutor` → `MockExecutor`).
+ * Batch listing execution via a pluggable single-item executor (mock or sandbox eBay client).
  * Completed {@link import("./types").ExecutionResult} is assembled in `runBatch`.
  */
 import type { CanonicalExecutionListing } from "../contracts/pipelineStageContracts";
 import type { BatchListingExecutor, ListingExecutionAdapter } from "./executor";
-import { MockExecutor } from "./mockExecutor";
+import { resolveListingExecutorPort } from "./pluggableExecutor";
 import type { ExecutionOutcome, ExecutionSuccess, ExecutionFailed } from "./types";
 
 export type ExecuteBatchListingsInput =
@@ -26,10 +26,7 @@ function resolveCanonicalListings(input: ExecuteBatchListingsInput): CanonicalEx
   return [...(input as readonly CanonicalExecutionListing[])];
 }
 
-/**
- * Batch orchestration over {@link ListingExecutionAdapter} (single-item contract).
- * Sole active path: {@link MockExecutor} only (no production executor module).
- */
+/** Batch orchestration over {@link ListingExecutionAdapter} (single-item executor port). */
 class MockOnlyBatchListingExecutor implements BatchListingExecutor {
   constructor(private readonly singleItemExecutor: ListingExecutionAdapter) {}
 
@@ -38,7 +35,7 @@ class MockOnlyBatchListingExecutor implements BatchListingExecutor {
     const failed: ExecutionFailed[] = [];
 
     for (const listing of listings) {
-      const result = await this.singleItemExecutor.execute({ listing });
+      const result = await this.singleItemExecutor.execute(listing);
       if ("error" in result) {
         failed.push(result as ExecutionFailed);
       } else {
@@ -51,11 +48,11 @@ class MockOnlyBatchListingExecutor implements BatchListingExecutor {
 }
 
 export function createMockOnlyBatchListingExecutor(): BatchListingExecutor {
-  return new MockOnlyBatchListingExecutor(new MockExecutor());
+  return new MockOnlyBatchListingExecutor(resolveListingExecutorPort());
 }
 
 /**
- * Runs the listing batch through the mock-only {@link BatchListingExecutor} boundary.
+ * Runs the listing batch through {@link BatchListingExecutor} → pluggable executor.
  */
 export function executeListingsWithMockBatchExecutor(
   listings: ExecuteBatchListingsInput

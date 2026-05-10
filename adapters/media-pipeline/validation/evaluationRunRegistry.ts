@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 import { stableStringify } from "./jsonStable";
 
 export type EvaluationEpidMode = "disabled" | "enabled" | "n/a";
-export type EvaluationExecutionMode = "mock" | "ebay";
+export type EvaluationExecutionMode = "mock" | "sandbox";
 
 export interface EvaluationRunPhaseSnapshot {
   readonly label: "epid_disabled" | "epid_enabled" | "ebay_adversarial";
@@ -68,6 +68,6 @@ export function defaultAdversarialRunPhases(): readonly EvaluationRunPhaseSnapsh
   return [
     { label: "epid_disabled", epidMode: "disabled", executionMode: "mock" },
     { label: "epid_enabled", epidMode: "enabled", executionMode: "mock" },
-    { label: "ebay_adversarial", epidMode: "n/a", executionMode: "ebay" },
+    { label: "ebay_adversarial", epidMode: "n/a", executionMode: "sandbox" },
   ];
 }
