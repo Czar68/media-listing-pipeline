@@ -1,5 +1,7 @@
 # Media Listing Pipeline
 
+> 📋 **Master Outline:** https://github.com/Czar68/czar-platform/blob/main/MASTER_OUTLINE.md
+
 Deterministic physical media listing system.
 
 Pipeline:
