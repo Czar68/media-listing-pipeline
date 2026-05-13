@@ -127,6 +127,11 @@ export class EbayExecutor implements ListingExecutorPort {
         product: {
           title: baseInv.product.title,
           description: baseInv.product.description,
+          aspects: {
+            "Processor": ["Not Applicable"],
+            "Platform": ["Universal"],
+            "Genre": ["Not Applicable"],
+          },
           ...(baseInv.product.imageUrls.length ? { imageUrls: [...baseInv.product.imageUrls] } : {}),
         },
       };
