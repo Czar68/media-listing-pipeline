@@ -136,6 +136,7 @@ export class EbayExecutor implements ListingExecutorPort {
             "Region Code": ["NTSC-U/C (US/Canada)"],
             "Rating": ["Not Rated"],
             "Release Year": ["Not Applicable"],
+            "Game Name": ["Not Applicable"],
           },
           ...(baseInv.product.imageUrls.length ? { imageUrls: [...baseInv.product.imageUrls] } : {}),
         },
