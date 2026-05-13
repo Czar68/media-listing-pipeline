@@ -1,5 +1,5 @@
 """
-AI-driven multi-disc detection on a single raw scan (Gemini vision + Pillow crops).
+AI-driven multi-disc detection on a single raw scan (Claude Vision primary, Gemini fallback + Pillow crops).
 
 Bounding boxes from the model use [ymin, xmin, ymax, xmax] in one of:
   • normalized 0–1 fractions of image height (y) and width (x), or
@@ -11,6 +11,8 @@ There is **no** multi-lb shipping / weight-class logic in this module — identi
 
 from __future__ import annotations
 
+import base64
+import io
 import json
 import logging
 import os
@@ -28,12 +30,24 @@ from core.logic.domain_config import get_domain_config, normalize_gemini_model_i
 
 _LOGGER = logging.getLogger(__name__)
 
+CLAUDE_MULTIDISC_MODEL = "claude-haiku-4-5-20251001"
+
+
+class VisionAllProvidersFailed(RuntimeError):
+    """Raised when Claude vision fails and the Gemini fallback also fails."""
+
+    def __init__(self, claude_exc: BaseException | None, gemini_exc: BaseException) -> None:
+        self.claude_exc = claude_exc
+        self.gemini_exc = gemini_exc
+        super().__init__(f"Multi-disc vision failed after Claude and Gemini: {gemini_exc!r}")
+
 
 def _resolve_model_id(explicit: str | None) -> str:
     cfg = get_domain_config()
     if explicit and str(explicit).strip():
         return normalize_gemini_model_id(str(explicit).strip())
     return get_gemini_model_name(cfg["ocr_model"])
+
 
 MULTI_DISC_VISION_PROMPT = """You are an expert optical media cataloguer for video game discs.
 
@@ -74,10 +88,108 @@ def _extract_json_object(text: str) -> dict[str, Any] | None:
         return None
 
 
-def detect_discs_in_image(image_path: str, *, model_id: str | None = None) -> list[dict[str, Any]]:
+def _discs_list_from_vision_text_claude(text: str) -> list[dict[str, Any]]:
+    if not text:
+        raise RuntimeError("Multi-disc vision returned empty text (Claude).")
+
+    data = _extract_json_object(text)
+    if not data or "discs" not in data:
+        raise RuntimeError("Multi-disc vision response was not valid JSON with a 'discs' array (Claude).")
+
+    discs = data["discs"]
+    if not isinstance(discs, list):
+        raise RuntimeError("'discs' must be a JSON array.")
+
+    out: list[dict[str, Any]] = []
+    for i, d in enumerate(discs):
+        if not isinstance(d, dict):
+            continue
+        box = d.get("bounding_box")
+        if not isinstance(box, list) or len(box) != 4:
+            _LOGGER.warning("Skipping disc %d: invalid bounding_box %r", i, box)
+            continue
+        try:
+            yn, xn, yx, xx = (float(box[0]), float(box[1]), float(box[2]), float(box[3]))
+        except (TypeError, ValueError):
+            continue
+        out.append(
+            {
+                "title": (d.get("title") or "").strip(),
+                "serial_number": (d.get("serial_number") or "").strip(),
+                "platform": (d.get("platform") or "").strip(),
+                "bounding_box": [yn, xn, yx, xx],
+            }
+        )
+    return out[:3]
+
+
+def _build_multidisc_user_prompt() -> str:
+    cfg = get_domain_config()
+    ocr_prompt = cfg["ocr_prompt"]
+    return (
+        f"{ocr_prompt}\n\n"
+        "---\n\n"
+        "Apply the instructions above when reading label and ring text. "
+        "For this same full-frame image, also perform multi-disc detection and layout as follows:\n\n"
+        f"{MULTI_DISC_VISION_PROMPT}"
+    )
+
+
+def _detect_discs_with_claude(image_path: str) -> list[dict[str, Any]]:
+    api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY is not set.")
+
+    try:
+        from anthropic import Anthropic
+        from PIL import Image
+    except ImportError as exc:
+        raise RuntimeError(f"Anthropic / Pillow dependencies missing: {exc}") from exc
+
+    try:
+        img = Image.open(image_path).convert("RGB")
+    except OSError as exc:
+        raise RuntimeError(f"Could not open image: {exc}") from exc
+
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=92)
+    b64 = base64.standard_b64encode(buf.getvalue()).decode("ascii")
+
+    user_prompt = _build_multidisc_user_prompt()
+    client = Anthropic(api_key=api_key)
+    message = client.messages.create(
+        model=CLAUDE_MULTIDISC_MODEL,
+        max_tokens=4096,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/jpeg",
+                            "data": b64,
+                        },
+                    },
+                    {"type": "text", "text": user_prompt},
+                ],
+            }
+        ],
+    )
+
+    text_parts: list[str] = []
+    for block in message.content:
+        if getattr(block, "type", None) == "text":
+            text_parts.append(block.text)
+    text = "".join(text_parts).strip()
+
+    return _discs_list_from_vision_text_claude(text)
+
+
+def _detect_discs_with_gemini(image_path: str, *, model_id: str | None = None) -> list[dict[str, Any]]:
     """
-    Run Gemini vision on the full *image_path* and return a list of disc dicts
-    (title, serial_number, platform, bounding_box).
+    Original Gemini-only multi-disc path (unchanged behaviour).
     """
     if not os.path.isfile(image_path):
         raise FileNotFoundError(image_path)
@@ -139,6 +251,39 @@ def detect_discs_in_image(image_path: str, *, model_id: str | None = None) -> li
             }
         )
     return out[:3]
+
+
+def detect_discs_in_image(image_path: str, *, model_id: str | None = None) -> list[dict[str, Any]]:
+    """
+    Run vision on the full *image_path* and return a list of disc dicts
+    (title, serial_number, platform, bounding_box).
+
+    Primary: Claude Haiku vision (ANTHROPIC_API_KEY), using ``domain_config`` OCR prompt
+    plus the multi-disc JSON schema. Fallback: existing Gemini call (same as before),
+    only if the Claude path raises.
+    """
+    if not os.path.isfile(image_path):
+        raise FileNotFoundError(image_path)
+
+    claude_exc: BaseException | None = None
+    try:
+        return _detect_discs_with_claude(image_path)
+    except Exception as exc:
+        claude_exc = exc
+        _LOGGER.warning(
+            "Multi-disc Claude vision failed; falling back to Gemini (%s)",
+            exc,
+        )
+
+    try:
+        return _detect_discs_with_gemini(image_path, model_id=model_id)
+    except Exception as gemini_exc:
+        _LOGGER.error(
+            "Multi-disc Gemini fallback failed after Claude failure (claude=%r gemini=%r)",
+            claude_exc,
+            gemini_exc,
+        )
+        raise VisionAllProvidersFailed(claude_exc, gemini_exc) from gemini_exc
 
 
 def _bbox_to_pixels(

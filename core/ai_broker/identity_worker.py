@@ -16,14 +16,18 @@ if ROOT_DIR not in sys.path:
 try:
     from core.ingestor.schema import Manifest, game_identity_template
     from core.ai_broker.ocr_engine import DiscScanner
-    from core.ai_broker.disc_detection import detect_discs_in_image, smart_crop_disc_with_circular_mask
+    from core.ai_broker.disc_detection import (
+        VisionAllProvidersFailed,
+        detect_discs_in_image,
+        smart_crop_disc_with_circular_mask,
+    )
     from core.adapters.upc_oracle import lookup_by_hub_code
     from core.logic.domain_config import get_domain_config, normalize_gemini_model_id
     from core.logic.game_listing_defaults import EBAY_CONDITION_ID, EBAY_CONDITION_LABEL
     from core.ai_broker.connection import connect_with_retry
     from core.ai_broker.gemini_env import get_gemini_model_name, require_google_api_key
     print(
-        " [v] Success: Manifest schema, DiscScanner, disc_detection (Gemini multi-disc), "
+        " [v] Success: Manifest schema, DiscScanner, disc_detection (Claude→Gemini multi-disc), "
         "domain_config, connection imported."
     )
 except ImportError as e:
@@ -36,6 +40,7 @@ RABBITMQ_QUEUE = "manifest_pipeline_v2"
 DOMAIN_CONFIG = get_domain_config()
 
 logging.basicConfig(level=logging.INFO)
+_LOGGER = logging.getLogger(__name__)
 
 
 def _processed_dir() -> str:
@@ -233,13 +238,30 @@ def process_image(manifest: Manifest) -> tuple[list[Manifest], list[Manifest]]:
                 get_gemini_model_name(DOMAIN_CONFIG["ocr_model"])
             )
             print(
-                f" [*] GAMES — full-frame Gemini vision (model={vision_model!r}); "
-                "up to 3 discs → financial_pipeline_v2 per unit..."
+                f" [*] GAMES — full-frame vision (Claude primary → Gemini fallback); "
+                f"fallback Gemini model={vision_model!r}; up to 3 discs → financial_pipeline_v2 per unit..."
             )
 
-            discs = detect_discs_in_image(source_image, model_id=vision_model)
+            try:
+                discs = detect_discs_in_image(source_image, model_id=vision_model)
+            except VisionAllProvidersFailed as exc:
+                _LOGGER.error(
+                    "Multi-disc vision failed after Claude and Gemini (tx=%s): claude=%r gemini=%r",
+                    manifest.transaction_id,
+                    exc.claude_exc,
+                    exc.gemini_exc,
+                )
+                print(
+                    f" [!] Vision failed (Claude + Gemini). Routing to human_review_required. "
+                    f"claude={exc.claude_exc!r} gemini={exc.gemini_exc!r}"
+                )
+                manifest.flags["human_review_required"] = True
+                manifest.status = "identity_failed"
+                republish_manifest_v2.append(manifest)
+                return republish_manifest_v2, forward_financial
+
             if not discs:
-                raise RuntimeError("Gemini reported zero discs in the scan; refusing empty pipeline.")
+                raise RuntimeError("Multi-disc vision reported zero discs in the scan; refusing empty pipeline.")
 
             out_dir = _processed_dir()
             for idx, disc in enumerate(discs):
