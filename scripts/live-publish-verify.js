@@ -39,7 +39,7 @@ const {
 
 // Deterministic source + externalId → stable SKU: "${source}-${externalId}"
 const SOURCE = "live-publish-verify";
-const EXTERNAL_ID = "lpv-001";
+const EXTERNAL_ID = "lpv-002";
 const EXPECTED_SKU = `${SOURCE}-${EXTERNAL_ID}`;
 const FIXED_CAPTURED_AT = "2026-04-25T12:00:00.000Z";
 
