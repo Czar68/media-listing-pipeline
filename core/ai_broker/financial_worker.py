@@ -50,7 +50,6 @@ def process_financials(manifest: Manifest) -> Manifest:
     
     if market_price is None:
         manifest.financials["listing_price"] = 9.99
-        manifest.flags["human_review_required"] = True
     else:
         manifest.financials["listing_price"] = market_price
 
@@ -67,22 +66,28 @@ def process_financials(manifest: Manifest) -> Manifest:
     # Update manifest financials
     manifest.financials.update(updated_financials)
     
-    net_profit = updated_financials.get("net_profit", 0.0)
+    net_profit = float(updated_financials.get("net_profit", 0.0))
+
+    # lightweight_game_unit: thin economics only when net margin is under $1.00 (not all low list prices).
+    manifest.flags["lightweight_game_unit"] = net_profit < 1.00
+
+    platform_code_present = bool(
+        str(manifest.identity.get("platform_code") or manifest.identity.get("hub_code") or "").strip()
+    )
+    conflict = bool(manifest.flags.get("conflict_detected"))
 
     if net_profit < 0.0:
         manifest.status = "STATUS_LOT_ONLY"
-        return manifest
-
-    # Thin margin: avoid "trading dollars" on low-value games after Ground Advantage + unit basis.
-    if net_profit < 1.50:
-        manifest.status = "flagged_for_review"
         manifest.flags["human_review_required"] = True
         return manifest
 
-    if not manifest.flags.get("human_review_required"):
-        manifest.status = "ready_for_listing"
-    else:
+    # human_review_required: loss (handled above), identity conflict, or missing hub/platform code only.
+    manifest.flags["human_review_required"] = conflict or (not platform_code_present)
+
+    if manifest.flags["human_review_required"]:
         manifest.status = "flagged_for_review"
+    else:
+        manifest.status = "ready_for_listing"
 
     return manifest
 

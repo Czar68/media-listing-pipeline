@@ -14,7 +14,11 @@ try:
     from core.ingestor.schema import Manifest
     from core.listing_engine.seo_optimiser import generate_ebay_title, generate_sku
     from core.logic.domain_config import get_domain_config
-    from core.logic.game_listing_defaults import EBAY_CONDITION_ID, EBAY_CONDITION_LABEL
+    from core.logic.game_listing_defaults import (
+        EBAY_CATEGORY_ID_GAMES,
+        EBAY_CONDITION_ID,
+        EBAY_CONDITION_LABEL,
+    )
     from core.ai_broker.gemini_env import get_gemini_model_name, require_google_api_key
     from core.ai_broker.connection import connect_with_retry
     print(" [v] Success: Modules imported.")
@@ -83,7 +87,7 @@ def process_listing(manifest: Manifest) -> dict:
         manifest.identity["ebay_condition_id"] = EBAY_CONDITION_ID
         manifest.identity["ebay_condition_label"] = EBAY_CONDITION_LABEL
 
-    manifest.identity["ebay_category_id"] = 617
+    manifest.identity["ebay_category_id"] = EBAY_CATEGORY_ID_GAMES
     
     title = manifest.identity.get("title") or "Unknown Title"
     
@@ -100,7 +104,7 @@ def process_listing(manifest: Manifest) -> dict:
     draft = {
         "transaction_id": manifest.transaction_id,
         "draft_status": draft_status,
-        "ebay_category_id": 617,
+        "ebay_category_id": EBAY_CATEGORY_ID_GAMES,
         "sku": sku,
         "title": ebay_title,
         "description": ebay_description,
