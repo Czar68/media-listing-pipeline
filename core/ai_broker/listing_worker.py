@@ -13,13 +13,13 @@ if ROOT_DIR not in sys.path:
 try:
     from core.ingestor.schema import Manifest
     from core.listing_engine.seo_optimiser import generate_ebay_title, generate_sku
+    from core.listing_engine.templates import get_disc_only_description
     from core.logic.domain_config import get_domain_config
     from core.logic.game_listing_defaults import (
         EBAY_CATEGORY_ID_GAMES,
         EBAY_CONDITION_ID,
         EBAY_CONDITION_LABEL,
     )
-    from core.ai_broker.gemini_env import get_gemini_model_name, require_google_api_key
     from core.ai_broker.connection import connect_with_retry
     print(" [v] Success: Modules imported.")
 except ImportError as e:
@@ -34,47 +34,59 @@ RABBITMQ_QUEUE = "listing_pipeline_v2"
 DRAFTS_DIR = os.path.join(ROOT_DIR, "data", "drafts")
 
 DOMAIN_CONFIG = get_domain_config()
-GEMINI_MODEL = get_gemini_model_name(DOMAIN_CONFIG["listing_model"])
+CLAUDE_LISTING_MODEL = "claude-haiku-4-5-20251001"
 
 os.makedirs(DRAFTS_DIR, exist_ok=True)
 
 
 def generate_pro_description(title: str, domain: str) -> str:
     """
-    Generate listing description via Gemini (GEMINI_MODEL + GOOGLE_API_KEY).
-    No silent mock fallback: missing API key logs CRITICAL and raises.
+    Generate listing description via Claude (ANTHROPIC_API_KEY).
+    On API errors, empty responses, or missing key, use template body from
+    ``core.listing_engine.templates.get_disc_only_description`` (same plain-text shape).
     """
-    require_google_api_key("listing_worker")
-    google_api_key = os.getenv("GOOGLE_API_KEY", "").strip()
+    prompt = (
+        f"You are an expert eBay copywriter. Write a high-converting listing description "
+        f"for a {domain} replacement disc: '{title}'.\n"
+        f"Include: condition disclosure, authenticity statement, shipping assurance, "
+        f"and a bundle savings hook. Keep it under 300 words."
+    )
 
-    print(f" [{GEMINI_MODEL}] Generating SEO description for: '{title}' (domain: {domain})")
+    api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+    if not api_key:
+        _LOGGER.warning(
+            "ANTHROPIC_API_KEY unset; using template listing description for %r.",
+            title,
+        )
+        return get_disc_only_description(title)
+
+    print(f" [{CLAUDE_LISTING_MODEL}] Generating SEO description for: '{title}' (domain: {domain})")
 
     try:
-        from google import genai
+        from anthropic import Anthropic
 
-        prompt = (
-            f"You are an expert eBay copywriter. Write a high-converting listing description "
-            f"for a {domain} replacement disc: '{title}'.\n"
-            f"Include: condition disclosure, authenticity statement, shipping assurance, "
-            f"and a bundle savings hook. Keep it under 300 words."
+        client = Anthropic(api_key=api_key)
+        message = client.messages.create(
+            model=CLAUDE_LISTING_MODEL,
+            max_tokens=2048,
+            messages=[{"role": "user", "content": prompt}],
         )
-        client = genai.Client(api_key=google_api_key)
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=prompt,
-        )
-        text = (getattr(response, "text", None) or "").strip()
+        text_parts: list[str] = []
+        for block in message.content:
+            if getattr(block, "type", None) == "text":
+                text_parts.append(block.text)
+        text = "".join(text_parts).strip()
         if not text:
-            _LOGGER.error(
-                "Gemini listing returned empty text (model=%s); refusing placeholder body.",
-                GEMINI_MODEL,
-            )
-            raise RuntimeError("Gemini returned empty description text.")
-        print(f" [{GEMINI_MODEL}] Gemini response received.")
+            raise RuntimeError("Claude returned empty description text.")
+        print(f" [{CLAUDE_LISTING_MODEL}] Claude response received.")
         return text
     except Exception as e:
-        _LOGGER.exception("Gemini listing generation failed (model=%s).", GEMINI_MODEL)
-        raise
+        _LOGGER.warning(
+            "Claude listing generation failed; using template fallback (model=%s): %s",
+            CLAUDE_LISTING_MODEL,
+            e,
+        )
+        return get_disc_only_description(title)
 
 
 def process_listing(manifest: Manifest) -> dict:
@@ -88,9 +100,9 @@ def process_listing(manifest: Manifest) -> dict:
         manifest.identity["ebay_condition_label"] = EBAY_CONDITION_LABEL
 
     manifest.identity["ebay_category_id"] = EBAY_CATEGORY_ID_GAMES
-    
+
     title = manifest.identity.get("title") or "Unknown Title"
-    
+
     ebay_title = generate_ebay_title(title=title)
     sku = generate_sku(manifest.raw_identifier)
 
@@ -100,7 +112,7 @@ def process_listing(manifest: Manifest) -> dict:
         draft_status = "DRAFT_PENDING_APPROVAL"
     else:
         draft_status = "READY_TO_PUBLISH"
-        
+
     draft = {
         "transaction_id": manifest.transaction_id,
         "draft_status": draft_status,
@@ -109,7 +121,7 @@ def process_listing(manifest: Manifest) -> dict:
         "title": ebay_title,
         "description": ebay_description,
         "financials": manifest.financials,
-        "source_manifest": manifest.model_dump()
+        "source_manifest": manifest.model_dump(),
     }
 
     draft_filename = f"{manifest.transaction_id}.json"
@@ -133,10 +145,10 @@ def handle_task(ch, method, properties, body):
             print(f" [->] Routing to sync_pipeline...")
             ch.queue_declare(queue="sync_pipeline", durable=True)
             ch.basic_publish(
-                exchange='',
+                exchange="",
                 routing_key="sync_pipeline",
                 body=json.dumps(draft),
-                properties=pika.BasicProperties(delivery_mode=2)
+                properties=pika.BasicProperties(delivery_mode=2),
             )
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
@@ -146,12 +158,18 @@ def handle_task(ch, method, properties, body):
 
 
 def start_worker():
-    """Fail fast when GOOGLE_API_KEY is absent so Gemini is never mocked."""
-    require_google_api_key("listing_worker (startup)")
-    print(
-        f" [*] Gemini env OK — GEMINI_MODEL={GEMINI_MODEL!r} GOOGLE_API_KEY is set.",
-        flush=True,
-    )
+    """Descriptions use Claude when ANTHROPIC_API_KEY is set; otherwise template fallback."""
+    ak = (os.getenv("ANTHROPIC_API_KEY") or "").strip()
+    if ak:
+        print(
+            f" [*] Listing worker — ANTHROPIC_API_KEY set; descriptions via Claude ({CLAUDE_LISTING_MODEL!r}).",
+            flush=True,
+        )
+    else:
+        print(
+            " [*] Listing worker — ANTHROPIC_API_KEY unset; descriptions use template fallback only.",
+            flush=True,
+        )
 
     connection = connect_with_retry(RABBITMQ_HOST, "ListingWorker")
 
