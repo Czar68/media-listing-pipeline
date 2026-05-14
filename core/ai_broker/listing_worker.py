@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import sys
 import os
 
@@ -12,8 +13,11 @@ if ROOT_DIR not in sys.path:
 
 try:
     from core.ingestor.schema import Manifest
-    from core.listing_engine.seo_optimiser import generate_ebay_title, generate_sku
-    from core.listing_engine.templates import get_disc_only_description
+    from core.listing_engine.seo_optimiser import generate_sku
+    from core.listing_engine.templates import (
+        get_disc_only_description,
+        get_fallback_ebay_title,
+    )
     from core.logic.domain_config import get_domain_config
     from core.logic.game_listing_defaults import (
         EBAY_CATEGORY_ID_GAMES,
@@ -39,46 +43,106 @@ CLAUDE_LISTING_MODEL = "claude-haiku-4-5-20251001"
 os.makedirs(DRAFTS_DIR, exist_ok=True)
 
 
-def generate_pro_description(title: str, domain: str) -> str:
+def _strip_outer_quotes(text: str) -> str:
+    t = (text or "").strip()
+    if len(t) >= 2 and t[0] in "\"'" and t[-1] == t[0]:
+        t = t[1:-1].strip()
+    return t
+
+
+def _claude_completion(prompt: str, *, max_tokens: int) -> str:
+    from anthropic import Anthropic
+
+    api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY is not set.")
+
+    client = Anthropic(api_key=api_key)
+    message = client.messages.create(
+        model=CLAUDE_LISTING_MODEL,
+        max_tokens=max_tokens,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    parts: list[str] = []
+    for block in message.content:
+        if getattr(block, "type", None) == "text":
+            parts.append(block.text)
+    return "".join(parts).strip()
+
+
+def generate_pro_title(game_title: str, platform: str) -> str:
     """
-    Generate listing description via Claude (ANTHROPIC_API_KEY).
-    On API errors, empty responses, or missing key, use template body from
-    ``core.listing_engine.templates.get_disc_only_description`` (same plain-text shape).
+    eBay title via Claude Haiku; on failure use template fallback (≤80 chars).
+    Uses manifest identity ``title`` and ``platform``.
     """
+    gt = (game_title or "Unknown Title").strip()
+    plat = (platform or "").strip() or "Unknown platform"
+
     prompt = (
-        f"You are an expert eBay copywriter. Write a high-converting listing description "
-        f"for a {domain} replacement disc: '{title}'.\n"
-        f"Include: condition disclosure, authenticity statement, shipping assurance, "
-        f"and a bundle savings hook. Keep it under 300 words."
+        "Generate an eBay listing title for this video game disc. Format: '{game_title} {platform_short} Disc Only {keyword1} {keyword2}'. "
+        "Rules: platform_short = PS1 for PlayStation/PlayStation 1, PS2 for PlayStation 2, PS3 for PlayStation 3, Xbox for Xbox, GCN for GameCube, N64 for Nintendo 64. "
+        "Keywords = 1-2 genre or category terms buyers actually search on eBay (examples: Horror, Platformer, Racing, Sports, RPG, Fighting, Shooter, Action, Adventure, Classic, Authentic, NTSC, Multiplayer). "
+        "Total title must be 80 characters or less. Return the title text only, nothing else, no quotes.\n\n"
+        f'Inventory game title (identity.title): "{gt}"\n'
+        f'Inventory platform (identity.platform): "{plat}"'
+    )
+
+    api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+    if not api_key:
+        _LOGGER.warning("ANTHROPIC_API_KEY unset; using template listing title for %r.", gt)
+        return get_fallback_ebay_title(gt, plat)
+
+    print(f" [{CLAUDE_LISTING_MODEL}] Generating eBay title for: {gt!r} (platform: {plat!r})")
+
+    try:
+        raw = _claude_completion(prompt, max_tokens=256)
+        text = _strip_outer_quotes(raw)
+        text = re.sub(r"\s+", " ", text).strip()
+        if not text:
+            raise RuntimeError("Claude returned empty title text.")
+        if len(text) > 80:
+            text = text[:80].rstrip()
+        print(f" [{CLAUDE_LISTING_MODEL}] Claude title received.")
+        return text
+    except Exception as e:
+        _LOGGER.warning(
+            "Claude title generation failed; using template fallback (model=%s): %s",
+            CLAUDE_LISTING_MODEL,
+            e,
+        )
+        return get_fallback_ebay_title(gt, plat)
+
+
+def generate_pro_description(game_title: str, platform: str) -> str:
+    """
+    eBay description via Claude Haiku; on failure use template fallback.
+    Uses manifest identity ``title`` and ``platform``.
+    """
+    gt = (game_title or "Unknown Title").strip()
+    plat = (platform or "").strip() or "the listed platform"
+
+    prompt = (
+        f"Write a 3-4 sentence eBay product description for {gt} on {plat}. Include: this is a disc only listing with no case, artwork, or manual. "
+        "The disc is an authentic original release in used condition with normal wear. Mention the genre and any notable series or franchise connections naturally as search keywords. "
+        "End with: ships same business day in protective padded mailer. Keep it factual, clean, and buyer-friendly. No hype, no false claims, no mention of replacement or refurbishment."
     )
 
     api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
     if not api_key:
         _LOGGER.warning(
             "ANTHROPIC_API_KEY unset; using template listing description for %r.",
-            title,
+            gt,
         )
-        return get_disc_only_description(title)
+        return get_disc_only_description(gt, plat)
 
-    print(f" [{CLAUDE_LISTING_MODEL}] Generating SEO description for: '{title}' (domain: {domain})")
+    print(f" [{CLAUDE_LISTING_MODEL}] Generating description for: {gt!r} (platform: {plat!r})")
 
     try:
-        from anthropic import Anthropic
-
-        client = Anthropic(api_key=api_key)
-        message = client.messages.create(
-            model=CLAUDE_LISTING_MODEL,
-            max_tokens=2048,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        text_parts: list[str] = []
-        for block in message.content:
-            if getattr(block, "type", None) == "text":
-                text_parts.append(block.text)
-        text = "".join(text_parts).strip()
+        raw = _claude_completion(prompt, max_tokens=2048)
+        text = raw.strip()
         if not text:
             raise RuntimeError("Claude returned empty description text.")
-        print(f" [{CLAUDE_LISTING_MODEL}] Claude response received.")
+        print(f" [{CLAUDE_LISTING_MODEL}] Claude description received.")
         return text
     except Exception as e:
         _LOGGER.warning(
@@ -86,7 +150,7 @@ def generate_pro_description(title: str, domain: str) -> str:
             CLAUDE_LISTING_MODEL,
             e,
         )
-        return get_disc_only_description(title)
+        return get_disc_only_description(gt, plat)
 
 
 def process_listing(manifest: Manifest) -> dict:
@@ -101,12 +165,12 @@ def process_listing(manifest: Manifest) -> dict:
 
     manifest.identity["ebay_category_id"] = EBAY_CATEGORY_ID_GAMES
 
-    title = manifest.identity.get("title") or "Unknown Title"
+    game_title = manifest.identity.get("title") or "Unknown Title"
+    platform = manifest.identity.get("platform") or ""
 
-    ebay_title = generate_ebay_title(title=title)
+    ebay_title = generate_pro_title(game_title=game_title, platform=platform)
     sku = generate_sku(manifest.raw_identifier)
-
-    ebay_description = generate_pro_description(title=title, domain=DOMAIN_CONFIG["domain"])
+    ebay_description = generate_pro_description(game_title=game_title, platform=platform)
 
     if manifest.flags.get("human_review_required"):
         draft_status = "DRAFT_PENDING_APPROVAL"
@@ -158,16 +222,16 @@ def handle_task(ch, method, properties, body):
 
 
 def start_worker():
-    """Descriptions use Claude when ANTHROPIC_API_KEY is set; otherwise template fallback."""
+    """Titles and descriptions use Claude when ANTHROPIC_API_KEY is set; else template fallbacks."""
     ak = (os.getenv("ANTHROPIC_API_KEY") or "").strip()
     if ak:
         print(
-            f" [*] Listing worker — ANTHROPIC_API_KEY set; descriptions via Claude ({CLAUDE_LISTING_MODEL!r}).",
+            f" [*] Listing worker — ANTHROPIC_API_KEY set; title + description via Claude ({CLAUDE_LISTING_MODEL!r}).",
             flush=True,
         )
     else:
         print(
-            " [*] Listing worker — ANTHROPIC_API_KEY unset; descriptions use template fallback only.",
+            " [*] Listing worker — ANTHROPIC_API_KEY unset; title + description use template fallbacks only.",
             flush=True,
         )
 
