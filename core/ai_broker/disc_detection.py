@@ -6,6 +6,7 @@ Bounding boxes from the model use [ymin, xmin, ymax, xmax] in one of:
   • 0–1000 scale (Gemini-style proportional coordinates).
 
 Output crops are normalised to **1000×1000** JPEGs (white canvas, disc centred).
+Circle detection uses OpenCV ``HoughCircles`` on the model bbox ROI when possible.
 There is **no** multi-lb shipping / weight-class logic in this module — identification only.
 """
 
@@ -13,7 +14,7 @@ from __future__ import annotations
 
 import base64
 import io
-import json
+import math
 import logging
 import os
 import re
@@ -319,6 +320,72 @@ def _bbox_to_pixels(
     return left, upper, right, lower
 
 
+def _square_crop_from_hough_or_center(roi_rgb):
+    """
+    Given a PIL RGB *roi_rgb*, return a square PIL crop:
+    HoughCircles disc + 5% padding per side on diameter, else largest centered square.
+    """
+    import cv2
+    import numpy as np
+    from PIL import Image
+
+    if not isinstance(roi_rgb, Image.Image):
+        roi_rgb = Image.fromarray(np.asarray(roi_rgb))
+    roi_rgb = roi_rgb.convert("RGB")
+    w, h = roi_rgb.size
+    if w < 8 or h < 8:
+        raise ValueError("ROI too small for disc detection.")
+
+    arr = np.asarray(roi_rgb)
+    gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
+    gray = cv2.GaussianBlur(gray, (9, 9), 2)
+
+    min_r = max(8, min(w, h) // 25)
+    max_r = max(min_r + 1, min(w, h) // 2 - 2)
+
+    circles = cv2.HoughCircles(
+        gray,
+        cv2.HOUGH_GRADIENT,
+        dp=1.2,
+        minDist=max(20, min(w, h) // 5),
+        param1=100,
+        param2=28,
+        minRadius=min_r,
+        maxRadius=max_r,
+    )
+
+    # Default: center crop of the largest square that fits in the ROI.
+    side = min(w, h)
+    left = (w - side) // 2
+    top = (h - side) // 2
+
+    if circles is not None and circles.size > 0:
+        pts = np.around(circles[0]).astype(int)
+        best_r = -1
+        best_cx = 0
+        best_cy = 0
+        for cx, cy, r in pts:
+            if r < min_r or r > max_r:
+                continue
+            if cx < 0 or cy < 0 or cx >= w or cy >= h:
+                continue
+            if r > best_r:
+                best_r = int(r)
+                best_cx, best_cy = int(cx), int(cy)
+        if best_r > 0:
+            pad = 1.1  # 5% padding on each side of diameter
+            side = int(math.ceil(2 * best_r * pad))
+            side = min(side, w, h)
+            left = max(0, min(best_cx - side // 2, w - side))
+            top = max(0, min(best_cy - side // 2, h - side))
+        else:
+            _LOGGER.info("HoughCircles found no usable disc; using center square crop.")
+    else:
+        _LOGGER.info("HoughCircles returned no circles; using center square crop.")
+
+    return roi_rgb.crop((left, top, left + side, top + side))
+
+
 def smart_crop_disc_with_circular_mask(
     source_image_path: str,
     bounding_box: list[float],
@@ -327,11 +394,11 @@ def smart_crop_disc_with_circular_mask(
     output_size: int = 1000,
 ) -> None:
     """
-    Crop the region from the full image, apply a circular mask (disc-only look),
-    scale and centre on a ``output_size`` × ``output_size`` white canvas, and save
-    a high-quality JPEG to *output_path*.
+    Crop the model bbox from the full image, detect a disc circle (OpenCV HoughCircles)
+    on that ROI (or center-crop the largest square if none), resize to ``output_size``
+    square on a white canvas, and save a JPEG to *output_path*.
     """
-    from PIL import Image, ImageDraw
+    from PIL import Image
 
     if len(bounding_box) != 4:
         raise ValueError("bounding_box must have four numbers [ymin, xmin, ymax, xmax]")
@@ -340,34 +407,15 @@ def smart_crop_disc_with_circular_mask(
     w, h = img.size
     left, upper, right, lower = _bbox_to_pixels(*bounding_box, w, h)
 
-    rect = img.crop((left, upper, right, lower)).convert("RGBA")
-    rw, rh = rect.size
-    if rw < 4 or rh < 4:
+    roi = img.crop((left, upper, right, lower))
+    if roi.size[0] < 8 or roi.size[1] < 8:
         raise ValueError("Crop region too small after clamping.")
 
-    cx, cy = rw // 2, rh // 2
-    r = int(min(rw, rh) * 0.46)
-    r = max(4, min(r, min(rw, rh) // 2 - 1))
-
-    mask = Image.new("L", (rw, rh), 0)
-    draw = ImageDraw.Draw(mask)
-    draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=255)
-    rect.putalpha(mask)
-
-    disc_rgb = Image.new("RGB", (rw, rh), (255, 255, 255))
-    disc_rgb.paste(rect, mask=mask)
-
-    margin = 40
-    inner = max(1, output_size - 2 * margin)
-    scale = min(inner / rw, inner / rh)
-    nw = max(1, int(round(rw * scale)))
-    nh = max(1, int(round(rh * scale)))
-    scaled = disc_rgb.resize((nw, nh), Image.Resampling.LANCZOS)
+    square = _square_crop_from_hough_or_center(roi)
+    out = square.resize((output_size, output_size), Image.Resampling.LANCZOS)
 
     canvas = Image.new("RGB", (output_size, output_size), (255, 255, 255))
-    ox = (output_size - nw) // 2
-    oy = (output_size - nh) // 2
-    canvas.paste(scaled, (ox, oy))
+    canvas.paste(out, (0, 0))
 
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     canvas.save(output_path, quality=95, optimize=True)
