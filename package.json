@@ -14,6 +14,7 @@
     "test:ebay-single-item": "npm run build:adapters-media-pipeline && node scripts/ebay-single-item-test.js",
     "validate:adversarial-media-pipeline": "npm run build:adapters-media-pipeline && node scripts/run-adversarial-media-pipeline-validation.cjs",
     "test": "npm run test -w @media-listing/core-condition && npm run test -w @media-listing/core-identity && npm run test -w @media-listing/scan-ingestion && npm run test -w @media-listing/identity-application",
+    "status": "npm run verify:media-listing:execution-fixture-package && echo 'media-listing-pipeline status OK'",
     "export:media-listing:pipeline": "npm run build -w @media-listing/media-listing-pipeline && npm run build -w @media-listing/media-listing-execution-fixture && node scripts/media-listing/export-pipeline-snapshot.js",
     "verify:media-listing:execution-fixture-package": "npm run build -w @media-listing/media-listing-pipeline && npm run build -w @media-listing/media-listing-execution-fixture",
     "verify:media-listing:execution-plan": "npm run build -w @media-listing/media-listing-pipeline && npm run build -w @media-listing/media-listing-execution-fixture && npm run build -w @media-listing/media-listing-execution-planner && node scripts/export-execution-plan.js",

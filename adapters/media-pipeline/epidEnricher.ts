@@ -1,3 +1,4 @@
+import { fetchItemSpecificsByUpc, type EbayItemSpecifics } from "./ebayItemSpecifics";
 import type { NormalizedInventoryItem } from "./types";
 
 /** Browse API product summary (subset). */
@@ -137,4 +138,68 @@ export async function enrichWithEpid(
   } catch {
     return { ...item, epidSource: "observability_only" };
   }
+}
+
+function extractUpc(item: NormalizedInventoryItem): string | null {
+  const meta = item.metadata;
+  if (!meta || typeof meta !== "object") {
+    return null;
+  }
+  const raw = meta.upc;
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return String(raw);
+  }
+  return null;
+}
+
+function itemAspectsFromSpecifics(spec: EbayItemSpecifics): Record<string, string[]> | undefined {
+  const out: Record<string, string[]> = {};
+  if (spec.platform) out.Platform = [spec.platform];
+  if (spec.genre) out.Genre = [spec.genre];
+  if (spec.publisher) out.Publisher = [spec.publisher];
+  if (spec.esrbRating) out["ESRB Rating"] = [spec.esrbRating];
+  if (spec.releaseYear) out["Release Year"] = [spec.releaseYear];
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+/**
+ * UPC-keyed catalog enrichment (Commerce Catalog API); falls back to Browse title search.
+ * On any failure, returns `item` unchanged or via title-search fallback. Never throws.
+ */
+export async function enrichWithEpidByUpc(
+  item: NormalizedInventoryItem,
+  options?: { readonly mode?: "execution" | "ingestion" },
+): Promise<EpidEnrichedInventoryItem> {
+  if (options?.mode !== "ingestion") {
+    return item as EpidEnrichedInventoryItem;
+  }
+
+  const upc = extractUpc(item);
+  if (!upc) {
+    return enrichWithEpid(item, options);
+  }
+
+  const token = String(process.env.EBAY_ACCESS_TOKEN ?? "").trim();
+  if (!token) {
+    return enrichWithEpid(item, options);
+  }
+
+  const specifics = await fetchItemSpecificsByUpc(upc, token);
+  if (specifics === null) {
+    return enrichWithEpid(item, options);
+  }
+
+  const itemAspects = itemAspectsFromSpecifics(specifics);
+
+  return {
+    ...item,
+    ...(specifics.epid ? { epid: specifics.epid } : {}),
+    epidSource: "observability_only",
+    ...(itemAspects ? { itemAspects } : {}),
+    matchConfidence: 0.85,
+  };
 }

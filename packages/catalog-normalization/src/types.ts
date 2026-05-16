@@ -6,6 +6,11 @@ export interface RawCatalogRecord {
   readonly productId?: string | null;
   readonly region?: string | null;
   readonly mediaFormat?: string | null;
+  readonly platform?: string | null;
+  readonly genre?: string | null;
+  readonly publisher?: string | null;
+  readonly esrbRating?: string | null;
+  readonly releaseYear?: string | null;
 }
 
 /**
@@ -16,4 +21,9 @@ export interface NormalizedCatalogRecord {
   readonly productId: string | null;
   readonly region: string | null;
   readonly mediaFormat: string | null;
+  readonly platform: string | null;
+  readonly genre: string | null;
+  readonly publisher: string | null;
+  readonly esrbRating: string | null;
+  readonly releaseYear: string | null;
 }

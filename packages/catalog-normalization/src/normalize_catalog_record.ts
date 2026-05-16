@@ -17,5 +17,10 @@ export function normalizeCatalogRecord(input: RawCatalogRecord): NormalizedCatal
     productId: normalizeOptionalString(input.productId),
     region: normalizeOptionalString(input.region),
     mediaFormat: normalizeOptionalString(input.mediaFormat),
+    platform: normalizeOptionalString(input.platform),
+    genre: normalizeOptionalString(input.genre),
+    publisher: normalizeOptionalString(input.publisher),
+    esrbRating: normalizeOptionalString(input.esrbRating),
+    releaseYear: normalizeOptionalString(input.releaseYear),
   };
 }
