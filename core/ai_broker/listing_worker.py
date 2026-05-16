@@ -3,8 +3,15 @@ import logging
 import re
 import sys
 import os
+import traceback
 
 import pika
+
+try:
+    sys.stdout.reconfigure(line_buffering=True)
+    sys.stderr.reconfigure(line_buffering=True)
+except AttributeError:
+    pass
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "..", ".."))
@@ -202,6 +209,8 @@ def handle_task(ch, method, properties, body):
     try:
         data = json.loads(body)
         manifest = Manifest(**data)
+        print(f" [Debug] Listing Worker received task from {RABBITMQ_QUEUE}: tx={manifest.transaction_id}")
+
 
         draft = process_listing(manifest)
 
@@ -217,7 +226,9 @@ def handle_task(ch, method, properties, body):
 
         ch.basic_ack(delivery_tag=method.delivery_tag)
     except Exception as e:
-        print(f" [!] Error processing message: {e}")
+        print(f" [!] Error processing message: {type(e).__name__}: {e}", flush=True)
+        traceback.print_exc()
+        sys.stderr.flush()
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
 

@@ -95,6 +95,8 @@ def handle_task(ch, method, properties, body):
     try:
         data = json.loads(body)
         manifest = Manifest(**data)
+        print(f" [Debug] Financial Worker received task from {RABBITMQ_QUEUE}: tx={manifest.transaction_id}")
+
         
         enriched_manifest = process_financials(manifest)
         

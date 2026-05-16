@@ -2,15 +2,16 @@
 AI-driven multi-disc detection on a single raw scan (Claude Vision primary, Gemini fallback + Pillow crops).
 
 Bounding boxes from the model use [ymin, xmin, ymax, xmax] in one of:
-  • normalized 0–1 fractions of image height (y) and width (x), or
-  • 0–1000 scale (Gemini-style proportional coordinates).
+  Ã¢â‚¬Â¢ normalized 0Ã¢â‚¬â€œ1 fractions of image height (y) and width (x), or
+  Ã¢â‚¬Â¢ 0Ã¢â‚¬â€œ1000 scale (Gemini-style proportional coordinates).
 
-Output crops are normalised to **1000×1000** JPEGs (white canvas, disc centred).
+Output crops are normalised to **1000Ãƒâ€”1000** JPEGs (white canvas, disc centred).
 Circle detection uses OpenCV ``HoughCircles`` on the model bbox ROI when possible.
-There is **no** multi-lb shipping / weight-class logic in this module — identification only.
+There is **no** multi-lb shipping / weight-class logic in this module Ã¢â‚¬â€ identification only.
 """
 
 from __future__ import annotations
+import json
 
 import base64
 import io
@@ -53,7 +54,7 @@ def _resolve_model_id(explicit: str | None) -> str:
 MULTI_DISC_VISION_PROMPT = """You are an expert optical media cataloguer for video game discs.
 
 Analyse the ENTIRE image. Identify individual game discs visible (partial discs count if the label area is visible).
-Return **at most 3** discs — the three clearest / most complete if more appear in frame.
+Return **at most 3** discs Ã¢â‚¬â€ the three clearest / most complete if more appear in frame.
 
 Return ONLY valid JSON (no markdown fences) with exactly this shape:
 {
@@ -68,10 +69,10 @@ Return ONLY valid JSON (no markdown fences) with exactly this shape:
 }
 
 bounding_box rules (critical):
-  • ymin, ymax are vertical positions as a fraction of FULL image HEIGHT (0.0 = top, 1.0 = bottom).
-  • xmin, xmax are horizontal positions as a fraction of FULL image WIDTH (0.0 = left, 1.0 = right).
-  • Use inclusive corners; ensure ymin < ymax and xmin < xmax.
-  • Tighten the box around each disc label/hub area (not the whole photo).
+  Ã¢â‚¬Â¢ ymin, ymax are vertical positions as a fraction of FULL image HEIGHT (0.0 = top, 1.0 = bottom).
+  Ã¢â‚¬Â¢ xmin, xmax are horizontal positions as a fraction of FULL image WIDTH (0.0 = left, 1.0 = right).
+  Ã¢â‚¬Â¢ Use inclusive corners; ensure ymin < ymax and xmin < xmax.
+  Ã¢â‚¬Â¢ Tighten the box around each disc label/hub area (not the whole photo).
 
 If no discs are visible, return {"discs": []}.
 """
