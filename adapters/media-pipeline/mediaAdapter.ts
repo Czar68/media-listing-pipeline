@@ -47,14 +47,51 @@ function splitFilesByExtension(files: string[]): { images: string[]; videos: str
   return { images, videos };
 }
 
+const PLATFORM_CODES: Record<string, string> = {
+  "playstation 4": "PS4",
+  "playstation 5": "PS5",
+  "playstation 3": "PS3",
+  "xbox one": "XB1",
+  "xbox series x": "XSX",
+  "xbox series s": "XSS",
+  "xbox 360": "X360",
+  "nintendo switch": "NSW",
+  "nintendo wii": "WII",
+  "nintendo wii u": "WIIU",
+  "nintendo 3ds": "3DS",
+  "nintendo ds": "NDS",
+  "pc": "PC",
+};
+
+function resolvePlatformCode(platform: string): string {
+  const key = platform.trim().toLowerCase();
+  return PLATFORM_CODES[key] ?? platform.trim().toUpperCase().replace(/\s+/g, '_').slice(0, 8);
+}
+
+function buildSku(input: RawScanResult): string {
+  const meta = input.metadata;
+  if (meta && typeof meta === 'object' && !Array.isArray(meta)) {
+    const m = meta as Record<string, unknown>;
+    const upc = typeof m.upc === 'string' ? m.upc.trim().replace(/\D/g, '') : '';
+    if (upc.length >= 8) {
+      return `${upc}-A`;
+    }
+    const platform = typeof m.platform === 'string' ? m.platform.trim() : '';
+    if (platform.length > 0) {
+      const code = resolvePlatformCode(platform);
+      return `${code}-A`;
+    }
+  }
+  const idPart = input.externalId ?? simpleHash(`${input.title}${input.capturedAt}`);
+  return `${input.source}-${idPart}`;
+}
+
 export class MediaAdapterImpl implements MediaAdapter {
   normalize(input: RawScanResult): NormalizedInventoryItem {
     const title = input.title.trim();
     const description = (input.description ?? "").trim();
     const capturedAt = input.capturedAt;
-    const idPart =
-      input.externalId ?? simpleHash(`${input.title}${input.capturedAt}`);
-    const sku = `${input.source}-${idPart}`;
+    const sku = buildSku(input);
     const normalizedAt = new Date().toISOString();
     const { images, videos } = splitFilesByExtension(input.files);
 
