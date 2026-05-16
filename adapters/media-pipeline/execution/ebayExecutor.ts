@@ -1,6 +1,7 @@
 import path from "path";
 import type { CanonicalExecutionListing } from "../contracts/pipelineStageContracts";
 import { toEbayInventoryRequestBody } from "../ebayMapper";
+import { buildVideoGameHtmlDescription } from '../videoGameDescription';
 import { normalizedInventoryItemFromCanonicalListing } from "./canonicalListingBridge";
 import type { ListingExecutorPort } from "./ports/listingExecutorPort";
 import type { ErrorType, ExecutionSuccess, ExecutionFailed } from "./types";
@@ -117,6 +118,32 @@ export class EbayExecutor implements ListingExecutorPort {
 
     try {
       const baseInv = toEbayInventoryRequestBody(listing);
+
+      const itemAspects = (listing.sourceMetadata as Record<string, unknown>).itemAspects as
+        Record<string, string[]> | undefined;
+
+      const aspects: Record<string, string[]> = {
+        "Platform": itemAspects?.["Platform"] ?? ["Not Applicable"],
+        "Genre": itemAspects?.["Genre"] ?? ["Not Applicable"],
+        "Brand": itemAspects?.["Publisher"] ?? ["Unbranded"],
+        "Type": ["Disc"],
+        "Region Code": ["NTSC-U/C (US/Canada)"],
+        "Rating": itemAspects?.["ESRB Rating"] ?? ["Not Rated"],
+        "Release Year": itemAspects?.["Release Year"] ?? ["Not Applicable"],
+        "Game Name": [baseInv.product.title || "Not Applicable"],
+      };
+
+      const htmlDescription = buildVideoGameHtmlDescription({
+        title: baseInv.product.title,
+        platform: (itemAspects?.["Platform"]?.[0]) ?? null,
+        genre: (itemAspects?.["Genre"]?.[0]) ?? null,
+        publisher: (itemAspects?.["Publisher"]?.[0]) ?? null,
+        esrbRating: (itemAspects?.["ESRB Rating"]?.[0]) ?? null,
+        releaseYear: (itemAspects?.["Release Year"]?.[0]) ?? null,
+        condition: baseInv.condition,
+        sku: listing.sku,
+      });
+
       const inventoryPutBody = {
         availability: {
           shipToLocationAvailability: {
@@ -126,18 +153,8 @@ export class EbayExecutor implements ListingExecutorPort {
         condition: baseInv.condition,
         product: {
           title: baseInv.product.title,
-          description: baseInv.product.description,
-          aspects: {
-            "Processor": ["Not Applicable"],
-            "Platform": ["Universal"],
-            "Genre": ["Not Applicable"],
-            "Brand": ["Unbranded"],
-            "Type": ["Disc"],
-            "Region Code": ["NTSC-U/C (US/Canada)"],
-            "Rating": ["Not Rated"],
-            "Release Year": ["Not Applicable"],
-            "Game Name": ["Not Applicable"],
-          },
+          description: htmlDescription,
+          aspects,
           ...(baseInv.product.imageUrls.length ? { imageUrls: [...baseInv.product.imageUrls] } : {}),
         },
       };
@@ -155,7 +172,7 @@ export class EbayExecutor implements ListingExecutorPort {
 
       let offerId = await this.tryReuseOffer(base, skuEnc);
       if (offerId === null) {
-        const offerResp = await this.createOffer(base, listing, sku);
+        const offerResp = await this.createOffer(base, listing, sku, htmlDescription);
         if ("error" in offerResp) return offerResp.error;
         offerId = offerResp.offerId;
       }
@@ -217,7 +234,8 @@ export class EbayExecutor implements ListingExecutorPort {
   private async createOffer(
     base: string,
     listing: CanonicalExecutionListing,
-    sku: string
+    sku: string,
+    htmlDescription: string
   ): Promise<{ offerId: string } | { error: ExecutionFailed }> {
     const fulfillmentPolicyId = process.env.EBAY_FULFILLMENT_POLICY_ID?.trim();
     const paymentPolicyId = process.env.EBAY_PAYMENT_POLICY_ID?.trim();
@@ -243,7 +261,7 @@ export class EbayExecutor implements ListingExecutorPort {
       availableQuantity: 1,
       merchantLocationKey,
       categoryId,
-      listingDescription: listing.product.description || listing.product.title,
+      listingDescription: htmlDescription,
       listingDuration: "GTC",
       listingPolicies: {
         fulfillmentPolicyId,
