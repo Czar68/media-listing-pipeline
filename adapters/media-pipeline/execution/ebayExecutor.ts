@@ -2,6 +2,7 @@ import path from "path";
 import type { CanonicalExecutionListing } from "../contracts/pipelineStageContracts";
 import { toEbayInventoryRequestBody } from "../ebayMapper";
 import { buildVideoGameHtmlDescription } from '../videoGameDescription';
+import { buildBestOffer } from '../bestOffer';
 import { normalizedInventoryItemFromCanonicalListing } from "./canonicalListingBridge";
 import type { ListingExecutorPort } from "./ports/listingExecutorPort";
 import type { ErrorType, ExecutionSuccess, ExecutionFailed } from "./types";
@@ -170,9 +171,11 @@ export class EbayExecutor implements ListingExecutorPort {
         return execFailed(listing, err instanceof Error ? err.message : String(err), "NETWORK_ERROR", err);
       }
 
+      const listPriceStr = canonicalListPriceUsd(listing);
+
       let offerId = await this.tryReuseOffer(base, skuEnc);
       if (offerId === null) {
-        const offerResp = await this.createOffer(base, listing, sku, htmlDescription);
+        const offerResp = await this.createOffer(base, listing, sku, htmlDescription, listPriceStr);
         if ("error" in offerResp) return offerResp.error;
         offerId = offerResp.offerId;
       }
@@ -235,7 +238,8 @@ export class EbayExecutor implements ListingExecutorPort {
     base: string,
     listing: CanonicalExecutionListing,
     sku: string,
-    htmlDescription: string
+    htmlDescription: string,
+    listPriceStr: string
   ): Promise<{ offerId: string } | { error: ExecutionFailed }> {
     const fulfillmentPolicyId = process.env.EBAY_FULFILLMENT_POLICY_ID?.trim();
     const paymentPolicyId = process.env.EBAY_PAYMENT_POLICY_ID?.trim();
@@ -254,6 +258,16 @@ export class EbayExecutor implements ListingExecutorPort {
     const merchantLocationKey =
       process.env.EBAY_MERCHANT_LOCATION_KEY?.trim() || "mock-location-unset";
 
+    const listPriceNum = parseFloat(listPriceStr);
+    const bestOffer = buildBestOffer({
+      listPrice: listPriceNum,
+      acquisitionCost: parseFloat(process.env.ACQUISITION_COST ?? '0') || 0,
+      shippingCost: parseFloat(process.env.SHIPPING_COST ?? '3.99') || 3.99,
+      adRatePercent: parseFloat(process.env.AD_RATE_PERCENT ?? '3') || 3,
+      ebayFeeRate: 0.13,
+      ebayFixedFee: 0.30,
+    });
+
     const offerBody = {
       sku,
       marketplaceId: "EBAY_US",
@@ -271,8 +285,21 @@ export class EbayExecutor implements ListingExecutorPort {
       pricingSummary: {
         price: {
           currency: "USD",
-          value: canonicalListPriceUsd(listing),
+          value: listPriceStr,
         },
+        ...(bestOffer.enabled ? {
+          bestOfferTerms: {
+            bestOfferEnabled: true,
+            autoAcceptPrice: {
+              currency: 'USD',
+              value: String(bestOffer.autoAcceptPrice!.toFixed(2)),
+            },
+            autoDeclinePrice: {
+              currency: 'USD',
+              value: String(bestOffer.autoDeclinePrice!.toFixed(2)),
+            },
+          },
+        } : {}),
       },
     };
 
