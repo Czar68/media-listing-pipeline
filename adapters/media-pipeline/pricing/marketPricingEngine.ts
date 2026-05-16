@@ -26,6 +26,18 @@ type BrowseSearchResponse = {
   itemSummaries?: BrowseItemSummary[];
 };
 
+/** Finding API search result (internal). */
+type FindingApiSearchResult = {
+  findCompletedItemsResponse?: Array<{
+    searchResult?: Array<{
+      item?: Array<{
+        sellingStatus?: Array<{ currentPrice?: Array<{ '__value__'?: string }> }>;
+        listingInfo?: Array<{ endTime?: Array<string> }>;
+      }>;
+    }>;
+  }>;
+};
+
 const MARKET_SNAPSHOT_CACHE = new Map<string, MarketPricingSnapshot>();
 
 function getEbayApiBaseUrl(): string {
@@ -34,6 +46,14 @@ function getEbayApiBaseUrl(): string {
     return "https://api.ebay.com";
   }
   return "https://api.sandbox.ebay.com";
+}
+
+function getFindingApiBaseUrl(): string {
+  const e = String(process.env.EBAY_ENV ?? "").trim().toLowerCase();
+  if (e === "production" || e === "prod") {
+    return "https://svcs.ebay.com/services/search/FindingService/v1";
+  }
+  return "https://svcs.sandbox.ebay.com/services/search/FindingService/v1";
 }
 
 /**
@@ -142,24 +162,29 @@ export async function getMarketPricingSnapshot(
   }
 
   try {
-    const token = String(process.env.EBAY_APP_TOKEN ?? "").trim();
-    if (!token) {
-      // No token configured, use deterministic fallback
+    const appId = String(process.env.EBAY_APP_ID ?? "").trim();
+    if (!appId) {
+      // No app ID configured, use deterministic fallback
       const snap = getDeterministicSnapshot(trimmedEpid);
       MARKET_SNAPSHOT_CACHE.set(trimmedEpid, snap);
       return snap;
     }
 
-    const base = getEbayApiBaseUrl();
-    const url = new URL(`${base}/buy/browse/v1/item_summary/search`);
-    url.searchParams.set("q", trimmedEpid);
-    url.searchParams.set("limit", "50"); // Get more samples for better statistics
+    const base = getFindingApiBaseUrl();
+    const url = new URL(base);
+    url.searchParams.set("OPERATION-NAME", "findCompletedItems");
+    url.searchParams.set("SERVICE-VERSION", "1.0.0");
+    url.searchParams.set("SECURITY-APPNAME", appId);
+    url.searchParams.set("RESPONSE-DATA-FORMAT", "JSON");
+    url.searchParams.set("keywords", trimmedEpid);
+    url.searchParams.set("itemFilter(0).name", "SoldItemsOnly");
+    url.searchParams.set("itemFilter(0).value", "true");
+    url.searchParams.set("itemFilter(1).name", "ListingType");
+    url.searchParams.set("itemFilter(1).value", "FixedPrice");
+    url.searchParams.set("sortOrder", "EndTimeSoonest");
+    url.searchParams.set("paginationInput.entriesPerPage", "100");
 
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const res = await fetch(url);
 
     if (!res.ok) {
       // API error, use deterministic fallback
@@ -168,20 +193,33 @@ export async function getMarketPricingSnapshot(
       return snap;
     }
 
-    const data = (await res.json()) as BrowseSearchResponse;
-    const summaries = data.itemSummaries ?? [];
+    const data = (await res.json()) as FindingApiSearchResult;
+    const items = data.findCompletedItemsResponse?.[0]?.searchResult?.[0]?.item ?? [];
 
-    if (summaries.length === 0) {
+    if (items.length === 0) {
       // No results, use deterministic fallback
       const snap = getDeterministicSnapshot(trimmedEpid);
       MARKET_SNAPSHOT_CACHE.set(trimmedEpid, snap);
       return snap;
     }
 
-    const prices = extractPrices(summaries);
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+    const prices = items
+      .filter(item => {
+        const endTimeStr = item.listingInfo?.[0]?.endTime?.[0];
+        if (!endTimeStr) return false;
+        const endTime = new Date(endTimeStr);
+        return endTime >= ninetyDaysAgo;
+      })
+      .map(item => item.sellingStatus?.[0]?.currentPrice?.[0]?.__value__)
+      .filter(val => val !== undefined)
+      .map(val => parseFloat(val!))
+      .filter(val => Number.isFinite(val) && val > 0);
     
     if (prices.length === 0) {
-      // No valid prices found, use deterministic fallback
+      // No valid prices found within 90 days, use deterministic fallback
       const snap = getDeterministicSnapshot(trimmedEpid);
       MARKET_SNAPSHOT_CACHE.set(trimmedEpid, snap);
       return snap;
