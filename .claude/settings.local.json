@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker exec *)",
+      "PowerShell(docker exec pipeline_broker *)",
+      "PowerShell(docker exec listing_worker *)",
+      "PowerShell(docker-compose *)"
+    ]
+  }
+}

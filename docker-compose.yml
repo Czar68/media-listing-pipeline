@@ -104,6 +104,7 @@ services:
     env_file: .env
     volumes:
       - .:/app
+      - ./data/drafts:/app/data/drafts
     environment:
       - RABBITMQ_HOST=rabbitmq
       - POSTGRES_HOST=postgres

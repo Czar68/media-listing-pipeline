@@ -206,6 +206,7 @@ def process_listing(manifest: Manifest) -> dict:
 
 
 def handle_task(ch, method, properties, body):
+    print("MESSAGE RECEIVED", flush=True)
     try:
         data = json.loads(body)
         manifest = Manifest(**data)

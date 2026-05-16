@@ -2,12 +2,12 @@
 AI-driven multi-disc detection on a single raw scan (Claude Vision primary, Gemini fallback + Pillow crops).
 
 Bounding boxes from the model use [ymin, xmin, ymax, xmax] in one of:
-  Ã¢â‚¬Â¢ normalized 0Ã¢â‚¬â€œ1 fractions of image height (y) and width (x), or
-  Ã¢â‚¬Â¢ 0Ã¢â‚¬â€œ1000 scale (Gemini-style proportional coordinates).
+  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ normalized 0ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“1 fractions of image height (y) and width (x), or
+  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ 0ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“1000 scale (Gemini-style proportional coordinates).
 
-Output crops are normalised to **1000Ãƒâ€”1000** JPEGs (white canvas, disc centred).
+Output crops are normalised to **1000ÃƒÆ’Ã¢â‚¬â€1000** JPEGs (white canvas, disc centred).
 Circle detection uses OpenCV ``HoughCircles`` on the model bbox ROI when possible.
-There is **no** multi-lb shipping / weight-class logic in this module Ã¢â‚¬â€ identification only.
+There is **no** multi-lb shipping / weight-class logic in this module ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â identification only.
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ def _resolve_model_id(explicit: str | None) -> str:
 MULTI_DISC_VISION_PROMPT = """You are an expert optical media cataloguer for video game discs.
 
 Analyse the ENTIRE image. Identify individual game discs visible (partial discs count if the label area is visible).
-Return **at most 3** discs Ã¢â‚¬â€ the three clearest / most complete if more appear in frame.
+Return **at most 3** discs ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â the three clearest / most complete if more appear in frame.
 
 Return ONLY valid JSON (no markdown fences) with exactly this shape:
 {
@@ -69,10 +69,10 @@ Return ONLY valid JSON (no markdown fences) with exactly this shape:
 }
 
 bounding_box rules (critical):
-  Ã¢â‚¬Â¢ ymin, ymax are vertical positions as a fraction of FULL image HEIGHT (0.0 = top, 1.0 = bottom).
-  Ã¢â‚¬Â¢ xmin, xmax are horizontal positions as a fraction of FULL image WIDTH (0.0 = left, 1.0 = right).
-  Ã¢â‚¬Â¢ Use inclusive corners; ensure ymin < ymax and xmin < xmax.
-  Ã¢â‚¬Â¢ Tighten the box around each disc label/hub area (not the whole photo).
+  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ymin, ymax are vertical positions as a fraction of FULL image HEIGHT (0.0 = top, 1.0 = bottom).
+  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ xmin, xmax are horizontal positions as a fraction of FULL image WIDTH (0.0 = left, 1.0 = right).
+  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Use inclusive corners; ensure ymin < ymax and xmin < xmax.
+  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Tighten the box around each disc label/hub area (not the whole photo).
 
 If no discs are visible, return {"discs": []}.
 """
@@ -90,11 +90,37 @@ def _extract_json_object(text: str) -> dict[str, Any] | None:
         return None
 
 
+def _strip_markdown_code_fences(text: str) -> str:
+    """Remove optional ```json / ``` wrappers; plain JSON passes through unchanged."""
+    t = text.strip()
+    if t.startswith("```"):
+        first_nl = t.find("\n")
+        if first_nl != -1:
+            t = t[first_nl + 1 :]
+        else:
+            t = re.sub(r"^```(?:json)?\s*", "", t, flags=re.IGNORECASE)
+    t = t.strip()
+    if t.endswith("```"):
+        t = t[:-3].rstrip()
+    return t.strip()
+
+
+def _parse_multidisc_vision_json(text: str) -> dict[str, Any] | None:
+    stripped = _strip_markdown_code_fences(text)
+    try:
+        parsed = json.loads(stripped)
+        if isinstance(parsed, dict):
+            return parsed
+    except json.JSONDecodeError:
+        pass
+    return _extract_json_object(stripped) or _extract_json_object(text)
+
+
 def _discs_list_from_vision_text_claude(text: str) -> list[dict[str, Any]]:
     if not text:
         raise RuntimeError("Multi-disc vision returned empty text (Claude).")
 
-    data = _extract_json_object(text)
+    data = _parse_multidisc_vision_json(text)
     if not data or "discs" not in data:
         raise RuntimeError("Multi-disc vision response was not valid JSON with a 'discs' array (Claude).")
 
@@ -224,7 +250,7 @@ def _detect_discs_with_gemini(image_path: str, *, model_id: str | None = None) -
     if not text:
         raise RuntimeError("Multi-disc vision returned empty text.")
 
-    data = _extract_json_object(text)
+    data = _parse_multidisc_vision_json(text)
     if not data or "discs" not in data:
         raise RuntimeError("Multi-disc vision response was not valid JSON with a 'discs' array.")
 
