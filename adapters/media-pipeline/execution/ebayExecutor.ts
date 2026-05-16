@@ -118,6 +118,24 @@ export class EbayExecutor implements ListingExecutorPort {
     const skuEnc = encodeURIComponent(sku);
 
     try {
+      const activeOffer = await this.findActiveListingQuantity(base, skuEnc);
+      if (activeOffer !== null) {
+        const newQuantity = activeOffer.currentQuantity + 1;
+        const incremented = await this.incrementListingQuantity(base, skuEnc, newQuantity);
+        return {
+          item: normalizedInventoryItemFromCanonicalListing(listing),
+          ebayPayload: listing,
+          response: { status: incremented ? 200 : 207, data: { duplicateDetected: true, newQuantity } },
+          publishResult: {
+            offerId: activeOffer.offerId,
+            status: 'PUBLISHED',
+            httpStatus: incremented ? 200 : 207,
+          },
+          recovered: false,
+          retryCount: 0,
+        };
+      }
+
       const baseInv = toEbayInventoryRequestBody(listing);
 
       const itemAspects = (listing.sourceMetadata as Record<string, unknown>).itemAspects as
@@ -231,6 +249,46 @@ export class EbayExecutor implements ListingExecutorPort {
       return typeof id === "string" && id.length > 0 ? id : null;
     } catch {
       return null;
+    }
+  }
+
+  private async findActiveListingQuantity(
+    base: string,
+    skuEnc: string
+  ): Promise<{ offerId: string; currentQuantity: number } | null> {
+    try {
+      const res = await this.ebay.request({
+        method: "GET",
+        url: `${base}/sell/inventory/v1/offer?sku=${skuEnc}&marketplace_id=EBAY_US`,
+      });
+      if (!res.ok || res.data === null || typeof res.data !== "object") return null;
+      const data = res.data as { offers?: { offerId?: string; status?: string; availableQuantity?: number }[] };
+      const offers = data.offers;
+      if (!Array.isArray(offers) || offers.length === 0) return null;
+      const published = offers.find((o) => (o.status ?? "").toUpperCase() === "PUBLISHED");
+      if (!published) return null;
+      const id = published.offerId;
+      if (typeof id !== "string" || id.length === 0) return null;
+      return { offerId: id, currentQuantity: published.availableQuantity ?? 1 };
+    } catch {
+      return null;
+    }
+  }
+
+  private async incrementListingQuantity(
+    base: string,
+    skuEnc: string,
+    newQuantity: number
+  ): Promise<boolean> {
+    try {
+      const res = await this.ebay.request({
+        method: "PATCH",
+        url: `${base}/sell/inventory/v1/inventory_item/${skuEnc}`,
+        body: { availability: { shipToLocationAvailability: { quantity: newQuantity } } },
+      });
+      return res.ok;
+    } catch {
+      return false;
     }
   }
 
