@@ -212,11 +212,13 @@ export class EbayExecutor implements ListingExecutorPort {
           title: baseInv.product.title,
           description: htmlDescription,
           aspects,
-          ...(validEbayImageUrls.length > 0
-            ? { imageUrls: validEbayImageUrls }
-            : baseInv.product.imageUrls.length
-              ? { imageUrls: [...baseInv.product.imageUrls] }
-              : {}),
+          ...((() => {
+            const validFallback = baseInv.product.imageUrls.filter(
+              (url: string) => typeof url === 'string' && url.startsWith('https://')
+            );
+            const urls = validEbayImageUrls.length > 0 ? validEbayImageUrls : validFallback;
+            return urls.length > 0 ? { imageUrls: urls } : {};
+          })()),
         },
       };
 
