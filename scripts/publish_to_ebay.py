@@ -10,6 +10,7 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 from core.adapters.ebay_client import EbayClient
+from core.adapters.s3_client import S3Client
 
 DRAFTS_DIR = os.path.join(ROOT_DIR, "data", "drafts")
 PUBLISHED_DIR = os.path.join(ROOT_DIR, "data", "storage", "published")
@@ -18,6 +19,7 @@ os.makedirs(PUBLISHED_DIR, exist_ok=True)
 
 def publish_drafts(limit: int):
     client = EbayClient()
+    s3 = S3Client()
     published_count = 0
     
     if not os.path.exists(DRAFTS_DIR):
@@ -45,10 +47,21 @@ def publish_drafts(limit: int):
             title = draft.get("title", "Unknown Title")
             aspects = {"Brand": "Unknown"} # mock aspects
             
+            image_paths = draft.get("source_manifest", {}).get("image_paths", [])
+            image_urls = []
+            for path in image_paths:
+                # Remap /app/... paths to local filesystem equivalent
+                local_path = path.replace("/app/", os.path.join(ROOT_DIR, "").replace("\\", "/") + "/").replace("//", "/")
+                try:
+                    url = s3.upload_image(local_path)
+                    image_urls.append(url)
+                except Exception:
+                    pass
+            
             print(f" [*] Processing draft: {filename} (SKU: {sku})")
             
             # Publish to eBay
-            response = client.create_inventory_item(sku=sku, title=title, aspects=aspects)
+            response = client.create_inventory_item(sku=sku, title=title, aspects=aspects, image_urls=image_urls)
             
             if response.get("success"):
                 ebay_listing_id = response.get("ebay_listing_id")

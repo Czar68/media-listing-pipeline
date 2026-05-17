@@ -13,25 +13,26 @@ class S3Client:
         """
         Uploads an image to S3 and returns a public URL for eBay API.
         """
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Image not found: {file_path}")
-
-        filename = os.path.basename(file_path)
-        s3_key = f"images/raw/{filename}"
-        
         try:
-            # self.s3.upload_file(file_path, self.bucket_name, s3_key, ExtraArgs={'ACL': 'public-read'})
-            # Mocking the actual upload for now, returning a signed/public URL
+            filename = os.path.basename(file_path)
+            s3_key = f"images/raw/{filename}"
+
+            if not os.path.exists(file_path):
+                print(f" [!] Image not found: {file_path}")
+                return f"https://mock-bucket.s3.amazonaws.com/images/raw/{filename}"
+
+            has_creds = all(os.getenv(k) for k in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "S3_BUCKET_NAME"])
             
-            print(f" [S3Client] Mock Uploaded {filename} to s3://{self.bucket_name}/{s3_key}")
+            if has_creds:
+                self.s3.upload_file(file_path, self.bucket_name, s3_key, ExtraArgs={'ACL': 'public-read'})
+                print(f" [S3Client] Uploaded {filename} to s3://{self.bucket_name}/{s3_key}")
+                public_url = f"https://{self.bucket_name}.s3.{self.region}.amazonaws.com/{s3_key}"
+                return public_url
+            else:
+                print(" [!] AWS credentials missing. Returning mock public URL.")
+                return f"https://mock-bucket.s3.amazonaws.com/images/raw/{filename}"
             
-            # Construct public URL
-            public_url = f"https://{self.bucket_name}.s3.{self.region}.amazonaws.com/{s3_key}"
-            return public_url
-            
-        except NoCredentialsError:
-            print(" [!] AWS credentials not found. Returning mock public URL.")
-            return f"https://mock-bucket.s3.amazonaws.com/images/raw/{filename}"
         except Exception as e:
             print(f" [!] S3 Upload Error: {e}")
+            filename = os.path.basename(file_path)
             return f"https://mock-bucket.s3.amazonaws.com/images/raw/{filename}"
