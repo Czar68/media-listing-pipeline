@@ -2,13 +2,7 @@ import type { EpidEnrichedInventoryItem } from "./epidEnricher";
 import type { NormalizedInventoryItem } from "./types";
 
 /** eBay Sell Inventory API condition strings used by this mapper (subset). */
-export type EbayListingCondition =
-  | "NEW"
-  | "USED_EXCELLENT"
-  | "USED_VERY_GOOD"
-  | "USED_GOOD"
-  | "USED_ACCEPTABLE"
-  | "FOR_PARTS_OR_NOT_WORKING";
+export type EbayListingCondition = "NEW" | "USED";
 
 export type EbayInventoryProduct = {
   title: string;
@@ -43,8 +37,9 @@ export type EbayInventoryItem = {
 function mapCondition(
   condition: NormalizedInventoryItem["condition"]
 ): EbayListingCondition {
+  if (condition === "USED") return "USED";
   if (condition === "NEW") return "NEW";
-  return "USED_ACCEPTABLE";
+  return "NEW";
 }
 
 /**
