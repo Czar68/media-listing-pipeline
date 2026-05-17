@@ -283,17 +283,31 @@ export class EbayExecutor implements ListingExecutorPort {
   private async tryReuseOffer(base: string, skuEnc: string): Promise<string | null> {
     try {
       const res = await this.ebay.request({
-        method: "GET",
+        method: 'GET',
         url: `${base}/sell/inventory/v1/offer?sku=${skuEnc}&marketplace_id=EBAY_US`,
       });
-      if (!res.ok || res.data === null || typeof res.data !== "object") return null;
+      if (!res.ok || res.data === null || typeof res.data !== 'object') return null;
       const data = res.data as { offers?: { offerId?: string; status?: string }[] };
       const offers = data.offers;
       if (!Array.isArray(offers) || offers.length === 0) return null;
-      const first =
-        offers.find((o) => (o.status ?? "").toUpperCase().includes("UNPUBLISHED")) ?? offers[0];
-      const id = first?.offerId;
-      return typeof id === "string" && id.length > 0 ? id : null;
+
+      // Delete all unpublished offers — they may have stale data from previous failed runs
+      for (const offer of offers) {
+        const status = (offer.status ?? '').toUpperCase();
+        const id = offer.offerId;
+        if (status === 'UNPUBLISHED' && typeof id === 'string' && id.length > 0) {
+          try {
+            await this.ebay.request({
+              method: 'DELETE',
+              url: `${base}/sell/inventory/v1/offer/${encodeURIComponent(id)}`,
+            });
+          } catch {
+            // ignore delete errors
+          }
+        }
+      }
+
+      return null; // Always create a fresh offer
     } catch {
       return null;
     }
