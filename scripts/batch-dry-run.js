@@ -54,7 +54,19 @@ async function main() {
     process.exit(0);
   }
 
-  const result = await runBatch(rawItems);
+  const { MediaAdapterImpl } = require('../adapters/media-pipeline/dist/mediaAdapter');
+  const adapter = new MediaAdapterImpl();
+  
+  const canonicalBindingBySku = new Map();
+  for (const item of rawItems) {
+    const sku = adapter.normalize(item).sku;
+    canonicalBindingBySku.set(sku, {
+      canonicalEpid: 'MOCK-EPID-DRY-RUN',
+      status: 'RESOLVED',
+    });
+  }
+
+  const result = await runBatch(rawItems, canonicalBindingBySku);
   
   process.stdout.write('\n--- Batch Summary ---\n');
   process.stdout.write(`Total Processed: ${rawItems.length}\n`);
