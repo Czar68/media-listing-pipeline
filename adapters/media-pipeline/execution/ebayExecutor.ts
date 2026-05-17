@@ -1,4 +1,5 @@
 import path from "path";
+import fs from "fs";
 import type { CanonicalExecutionListing } from "../contracts/pipelineStageContracts";
 import { toEbayInventoryRequestBody } from "../ebayMapper";
 import { buildVideoGameHtmlDescription } from '../videoGameDescription';
@@ -136,6 +137,18 @@ export class EbayExecutor implements ListingExecutorPort {
         };
       }
 
+      const rawImagePaths: string[] = [];
+      const meta = listing.sourceMetadata as Record<string, unknown>;
+      const manifestPaths = meta.imagePaths;
+      if (Array.isArray(manifestPaths)) {
+        for (const p of manifestPaths) {
+          if (typeof p === 'string') rawImagePaths.push(p);
+        }
+      }
+      const ebayImageUrls = rawImagePaths.length > 0
+        ? await this.uploadImagesToEbay(base, rawImagePaths)
+        : [];
+
       const baseInv = toEbayInventoryRequestBody(listing);
 
       const itemAspects = (listing.sourceMetadata as Record<string, unknown>).itemAspects as
@@ -174,7 +187,11 @@ export class EbayExecutor implements ListingExecutorPort {
           title: baseInv.product.title,
           description: htmlDescription,
           aspects,
-          ...(baseInv.product.imageUrls.length ? { imageUrls: [...baseInv.product.imageUrls] } : {}),
+          ...(ebayImageUrls.length > 0
+            ? { imageUrls: ebayImageUrls }
+            : baseInv.product.imageUrls.length
+              ? { imageUrls: [...baseInv.product.imageUrls] }
+              : {}),
         },
       };
 
@@ -290,6 +307,41 @@ export class EbayExecutor implements ListingExecutorPort {
     } catch {
       return false;
     }
+  }
+
+  private async uploadImagesToEbay(
+    base: string,
+    imagePaths: readonly string[]
+  ): Promise<string[]> {
+    const urls: string[] = [];
+    const token = process.env.EBAY_ACCESS_TOKEN ?? '';
+    for (const imgPath of imagePaths) {
+      try {
+        // Remap /app/ container paths to local cwd equivalent
+        const localPath = imgPath.startsWith('/app/')
+          ? path.join(process.cwd(), imgPath.slice(5))
+          : imgPath;
+        if (!fs.existsSync(localPath)) continue;
+        const fileBuffer = fs.readFileSync(localPath);
+        const res = await this.ebay.request({
+          method: 'POST',
+          url: `${base}/sell/media/v1_beta/inventory_item/image`,
+          body: fileBuffer.toString('base64'),
+          headers: {
+            'Content-Type': 'image/jpeg',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (res.ok && res.data && typeof res.data === 'object') {
+          const d = res.data as Record<string, unknown>;
+          const imageUrl = typeof d.imageUrl === 'string' ? d.imageUrl : undefined;
+          if (imageUrl) urls.push(imageUrl);
+        }
+      } catch {
+        // silently skip failures
+      }
+    }
+    return urls;
   }
 
   private async createOffer(

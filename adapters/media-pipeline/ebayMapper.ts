@@ -28,6 +28,8 @@ export type EbayInventoryItem = {
     /** Present when {@link enrichWithEpid} matched a catalog product. */
     epid?: string;
     matchConfidence?: number;
+    /** Disc image paths from source manifest, passed through to executor. */
+    imagePaths?: readonly string[];
   };
 };
 
@@ -64,6 +66,9 @@ export function toEbayInventoryItem(item: NormalizedInventoryItem): EbayInventor
       ...(enriched.epid !== undefined ? { epid: enriched.epid } : {}),
       ...(enriched.matchConfidence !== undefined
         ? { matchConfidence: enriched.matchConfidence }
+        : {}),
+      ...(Array.isArray((item.metadata as Record<string, unknown>)?.imagePaths)
+        ? { imagePaths: (item.metadata as Record<string, unknown>).imagePaths as string[] }
         : {}),
     },
   };
