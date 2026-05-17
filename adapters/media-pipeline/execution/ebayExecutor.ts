@@ -138,6 +138,8 @@ export class EbayExecutor implements ListingExecutorPort {
     const skuEnc = encodeURIComponent(sku);
 
     try {
+      // Duplicate detection disabled — each draft SKU is unique
+      /*
       const activeOffer = await this.findActiveListingQuantity(base, skuEnc);
       if (activeOffer !== null) {
         const newQuantity = activeOffer.currentQuantity + 1;
@@ -155,6 +157,7 @@ export class EbayExecutor implements ListingExecutorPort {
           retryCount: 0,
         };
       }
+      */
 
       const rawImagePaths: string[] = [];
       const meta = listing.sourceMetadata as Record<string, unknown>;
