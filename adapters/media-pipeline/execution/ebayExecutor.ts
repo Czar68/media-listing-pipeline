@@ -1,7 +1,7 @@
 import path from "path";
 import fs from "fs";
 import type { CanonicalExecutionListing } from "../contracts/pipelineStageContracts";
-import { toEbayInventoryRequestBody } from "../ebayMapper";
+import { toEbayInventoryRequestBody, EbayListingCondition } from "../ebayMapper";
 import { buildVideoGameHtmlDescription } from '../videoGameDescription';
 import { buildBestOffer } from '../bestOffer';
 import { normalizedInventoryItemFromCanonicalListing } from "./canonicalListingBridge";
@@ -176,13 +176,29 @@ export class EbayExecutor implements ListingExecutorPort {
         sku: listing.sku,
       });
 
+      function conditionFromEbayId(conditionId: number | undefined): string {
+        const map: Record<number, string> = {
+          1000: 'NEW',
+          3000: 'USED_EXCELLENT',
+          4000: 'USED_VERY_GOOD',
+          5000: 'USED_GOOD',
+          6000: 'USED_GOOD',
+          7000: 'USED_ACCEPTABLE',
+          9000: 'FOR_PARTS_OR_NOT_WORKING',
+        };
+        return conditionId !== undefined ? (map[conditionId] ?? 'USED_ACCEPTABLE') : 'USED_ACCEPTABLE';
+      }
+
+      const ebayConditionId = (listing.sourceMetadata as Record<string, unknown>).ebayConditionId as number | undefined;
+      const resolvedCondition = conditionFromEbayId(ebayConditionId) as EbayListingCondition;
+
       const inventoryPutBody = {
         availability: {
           shipToLocationAvailability: {
             quantity: 1,
           },
         },
-        condition: baseInv.condition,
+        condition: resolvedCondition,
         product: {
           title: baseInv.product.title,
           description: htmlDescription,

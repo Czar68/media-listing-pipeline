@@ -2,7 +2,13 @@ import type { EpidEnrichedInventoryItem } from "./epidEnricher";
 import type { NormalizedInventoryItem } from "./types";
 
 /** eBay Sell Inventory API condition strings used by this mapper (subset). */
-export type EbayListingCondition = "NEW" | "USED";
+export type EbayListingCondition =
+  | "NEW"
+  | "USED_EXCELLENT"
+  | "USED_VERY_GOOD"
+  | "USED_GOOD"
+  | "USED_ACCEPTABLE"
+  | "FOR_PARTS_OR_NOT_WORKING";
 
 export type EbayInventoryProduct = {
   title: string;
@@ -30,15 +36,15 @@ export type EbayInventoryItem = {
     matchConfidence?: number;
     /** Disc image paths from source manifest, passed through to executor. */
     imagePaths?: readonly string[];
+    ebayConditionId?: number;
   };
 };
 
 function mapCondition(
   condition: NormalizedInventoryItem["condition"]
 ): EbayListingCondition {
-  if (condition === "USED") return "USED";
   if (condition === "NEW") return "NEW";
-  return "NEW";
+  return "USED_ACCEPTABLE";
 }
 
 /**
@@ -69,6 +75,9 @@ export function toEbayInventoryItem(item: NormalizedInventoryItem): EbayInventor
         : {}),
       ...(Array.isArray((item.metadata as Record<string, unknown>)?.imagePaths)
         ? { imagePaths: (item.metadata as Record<string, unknown>).imagePaths as string[] }
+        : {}),
+      ...(typeof (item.metadata as Record<string, unknown>)?.ebayConditionId === 'number'
+        ? { ebayConditionId: (item.metadata as Record<string, unknown>).ebayConditionId as number }
         : {}),
     },
   };
