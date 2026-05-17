@@ -8,6 +8,7 @@
     "adapters/media-pipeline"
   ],
   "scripts": {
+    "batch:dry-run": "ts-node scripts/batch-dry-run.ts",
     "build": "npm run build -w @media-listing/core-domain && npm run build -w @media-listing/core-condition && npm run build -w @media-listing/core-identity && npm run build -w @media-listing/scan-ingestion && npm run build -w @media-listing/identity-application",
     "build:adapters-media-pipeline": "npm run build -w @media-listing/adapters-media-pipeline",
     "verify": "npm run verify:media-listing:execution-fixture-package",

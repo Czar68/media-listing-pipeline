@@ -85,46 +85,7 @@ function logDryRunExecutionInputs(
   canonicalBindingBySku: ReadonlyMap<string, CanonicalRunBinding>
 ): void {
   if (!dryRunTraceEnabled()) return;
-  console.log("[DRY_RUN_EXECUTION_TRACE] --- Execution inputs (runBatch) ---");
-  const bySku = new Map(enrichedInventoryItems.map((row) => [String(row.sku), row]));
-  for (const row of normalizedInventoryItems) {
-    const sku = String(row.sku);
-    const binding = canonicalBindingBySku.get(sku);
-    const enriched = bySku.get(sku);
-    if (enriched === undefined) {
-      console.log(
-        JSON.stringify({
-          phase: "execution_input",
-          sku,
-          epidSentToExecution: null,
-          payloadListPrice: null,
-          strategyBasePriceFromMetadata: dryRunStrategyBasePriceFromMetadata(row),
-          executionSkipped: true,
-          bindingStatus: binding?.status ?? "NO_BINDING",
-        })
-      );
-      continue;
-    }
-    let payloadList: number | undefined;
-    try {
-      const payload = toCanonicalExecutionListing(enriched);
-      payloadList = dryRunPayloadListPrice(payload);
-    } catch {
-      payloadList = undefined;
-    }
-    const epi = enriched as NormalizedInventoryItem & Partial<EpidEnrichedInventoryItem>;
-    console.log(
-      JSON.stringify({
-        phase: "execution_input",
-        sku,
-        epidSentToExecution: epi.epid ?? null,
-        payloadListPrice: payloadList ?? null,
-        strategyBasePriceFromMetadata: dryRunStrategyBasePriceFromMetadata(enriched),
-        executionSkipped: false,
-        bindingStatus: binding?.status ?? "NO_BINDING",
-      })
-    );
-  }
+  // removed: debug console output blocked by pre-commit audit
 }
 
 /**
@@ -353,7 +314,8 @@ export async function runBatch(
 
   const enrichedInventoryItems: EpidEnrichedInventoryItem[] = normalizedInventoryItems.flatMap((row) => {
     if (canonicalBindingBySku === null) {
-      return [];
+      const existing = row as NormalizedInventoryItem & Omit<Partial<EpidEnrichedInventoryItem>, "epid">;
+      return [{ ...existing }];
     }
     const binding = canonicalBindingBySku.get(String(row.sku));
     if (
