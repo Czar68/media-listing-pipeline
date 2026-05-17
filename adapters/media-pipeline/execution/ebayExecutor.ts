@@ -168,6 +168,10 @@ export class EbayExecutor implements ListingExecutorPort {
         ? await this.uploadImagesToEbay(base, rawImagePaths)
         : [];
 
+      const validEbayImageUrls = ebayImageUrls.filter(
+        url => typeof url === 'string' && url.startsWith('https://')
+      );
+
       const baseInv = toEbayInventoryRequestBody(listing);
 
       const itemAspects = (listing.sourceMetadata as Record<string, unknown>).itemAspects as
@@ -208,8 +212,8 @@ export class EbayExecutor implements ListingExecutorPort {
           title: baseInv.product.title,
           description: htmlDescription,
           aspects,
-          ...(ebayImageUrls.length > 0
-            ? { imageUrls: ebayImageUrls }
+          ...(validEbayImageUrls.length > 0
+            ? { imageUrls: validEbayImageUrls }
             : baseInv.product.imageUrls.length
               ? { imageUrls: [...baseInv.product.imageUrls] }
               : {}),
