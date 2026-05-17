@@ -369,3 +369,10 @@ PHASE_04 — identity-application
 ## PHASE_A_2 — EBAY SANDBOX PUBLISH VERIFIED (2026-05-13)
 
 **Append-only note:** PHASE_A_2 complete. End-to-end sandbox publish verified via `scripts/live-publish-verify.js`. Pipeline runs scan → normalize → enrich → execute → publish successfully. Real eBay sandbox listing created: listingId `110589526933` at `https://www.sandbox.ebay.com/itm/110589526933`. Fixed: category changed from `111422` to `139973` (Video Games), fulfillment policy recreated (`6226924000`), required item specifics added to inventory PUT body (Processor, Platform, Genre, Brand, Type, Region Code, Rating, Release Year, Game Name). VERDICT: PASS. Next phase: PHASE_A_3 — batch publish with real disc data.
+
+---
+
+## AWS S3 ENVIRONMENT CONFIGURATION — FEATURE A-4-2 (2026-05-16)
+
+**Append-only note:** S3 image upload credentials and configuration template added to `.env.example` and wired to containerized workers (`ingress_monitor`, `ingress_orchestrator_v3`, `listing_worker`) in `docker-compose.yml`. Real AWS credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BUCKET_NAME`) must be populated in the local `.env` file before A-4-4 live publication verification can pass successfully.
+

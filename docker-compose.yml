@@ -114,6 +114,11 @@ services:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       # Maps host .env LISTING_MODEL -> container GEMINI_MODEL.
       - GEMINI_MODEL=${LISTING_MODEL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - S3_REGION=${S3_REGION}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -138,6 +143,11 @@ services:
       # Without this, the script would build a path relative to its __file__
       # location which may differ from the actual bind-mount target.
       - INGRESS_DIR=/app/data/ingress
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - S3_REGION=${S3_REGION}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -161,6 +171,11 @@ services:
       - RABBITMQ_QUEUE=manifest_pipeline_v2
       - INGRESS_DIR=/app/data/ingress
       - RAW_DIR=/app/data/storage/raw
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - S3_REGION=${S3_REGION}
     depends_on:
       rabbitmq:
         condition: service_healthy
