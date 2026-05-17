@@ -61,6 +61,26 @@ const PLATFORM_CODES: Record<string, string> = {
   "nintendo 3ds": "3DS",
   "nintendo ds": "NDS",
   "pc": "PC",
+  "playstation 1": "PS1",
+  "playstation": "PS1",
+  "playstation 2": "PS2",
+  "psx": "PS1",
+  "ps1": "PS1",
+  "ps2": "PS2",
+  "ps3": "PS3",
+  "ps4": "PS4",
+  "ps5": "PS5",
+  "xbox": "XB1",
+  "gameboy": "GBA",
+  "gameboy advance": "GBA",
+  "gameboy color": "GBC",
+  "game boy": "GBA",
+  "sega genesis": "GEN",
+  "sega saturn": "SAT",
+  "sega dreamcast": "DC",
+  "n64": "N64",
+  "nintendo 64": "N64",
+  "gamecube": "GCN",
 };
 
 function resolvePlatformCode(platform: string): string {
@@ -79,7 +99,8 @@ function buildSku(input: RawScanResult): string {
     const platform = typeof m.platform === 'string' ? m.platform.trim() : '';
     if (platform.length > 0) {
       const code = resolvePlatformCode(platform);
-      return `${code}-A`;
+      const titleHash = simpleHash(`${input.title}${input.capturedAt}`).slice(0, 6);
+      return `${code}-${titleHash}-A`;
     }
   }
   const idPart = input.externalId ?? simpleHash(`${input.title}${input.capturedAt}`);
